@@ -1,24 +1,24 @@
-/**
- * This represents the client side of stage 1.
- * 
- * The
- *  - commands,
- *  - and events
- * you define here will only be valid for the duration of the stage.
- */
+import customServerEvents from './server-events'
+import {serverEvents  as netframeEvents} from '../lib/netframe'
+import commands from './server-commands'
+
+import serverController from './server-controller'
+
+let combinedEvents = Object.assign(customServerEvents, netframeEvents);
 
 // Export stage as the default export
 export default {
   // Optionally define commands
-  commands: {},
+  commands: commands,
 
   // Optionally define events
-  events: {},
+  events: combinedEvents,
 
   // Optionally define a setup method that is run before stage begins
   setup: (server) => {
-    console.log('PREPARING SERVER FOR STAGE',
-      server.getCurrentStage())
+    console.log('PREPARING SERVER FOR STAGE', server.getCurrentStage());
+
+    serverController.init(server);
   },  
   
   // Optionally define a teardown method that is run when stage finishes

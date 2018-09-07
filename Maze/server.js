@@ -1,5 +1,5 @@
 import createServer, { Network } from 'monsterr'
-import stage1 from './src/stages/stage1/server'
+import stage1 from './src/stages/stage1/server/server'
 
 const stages = [stage1]
 
@@ -18,3 +18,5 @@ const monsterr = createServer({
 })
 
 monsterr.run()
+
+
