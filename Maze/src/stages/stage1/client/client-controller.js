@@ -2,6 +2,7 @@ import rpcController from '../controller/controller'
 import model from "../model/model";
 import view from './client-view'
 import {hasMixin} from "../lib/mixwith";
+import * as netframe from '../lib/netframe'
 
 let client;
 let clientId;
@@ -27,9 +28,7 @@ const rpcs = {
     rpcSetControlledEntity: rpcSetControlledEntity,
     rpcCreateBox: rpcCreateBox,
     rpcCreateTiles: rpcCreateTiles,
-    rpcCreateNetworkIdentity: rpcCreateNetworkIdentity,
     rpcSetClientId: rpcSetClientId
-
 }
 
 function init(c){
@@ -150,11 +149,11 @@ function rpcSetClientId(id){
     console.log('Setting clientId: ' + id);
     clientId = id;
 }
-
+/*
 function rpcCreateNetworkIdentity(networkIdentity){
     console.log('addNetworkIdentity() called with: ' + JSON.stringify(networkIdentity));
     rpcController.RpcCreateNetworkIdentity(networkIdentity.identityId, networkIdentity.clientId, networkIdentity.name, networkIdentity.color);
-}
+}*/
 
 function rpcCreatePlayer(entity){
     console.log('addPlayer called with ' + JSON.stringify(entity) + ' with ID: ' + entity.id);
@@ -176,7 +175,7 @@ function rpcCreateTiles(entityArr){
             rpcController.RpcCreateTile(entityArr[y][x].id, entityArr[y][x].type, entityArr[y][x].position);
         }
     }
-    console.log('Current entities: ' + rpcController.getEntitiesKeys());
+    console.log('Current entities: ' + netframe.getEntitiesKeys());
 
     // Make tile view
     view.createTilesView(rpcController.GetTiles());

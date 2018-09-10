@@ -57,7 +57,6 @@ function update(){
         server.send('NewStateUpdate', data).toAll();
 
         clearStateChanges();
-
     }
     timestamp++;
 }
@@ -73,18 +72,8 @@ function clearStateChanges(){
     console.log('Cleared stateChanges - length: ' + rpcController.publicVars.stateChanges.length);
 }
 
-function clientConnected(client){
+function clientConnected(client, networkIdentity){
     console.log('clientConnected() called on server-controller...');
-    netframe.makeRPC('rpcSetClientId', [client]);
-
-    let randomName = Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 5);
-
-    console.log('Creating network identity...');
-    // Create entity
-    let identityId = rpcController.GetNetworkIdentities().length;
-    let networkIdentity = rpcController.RpcCreateNetworkIdentity(identityId, client, randomName, rpcController.getNetworkIdentityColors()[identityId]);
-    //server.send('SetNetworkIdentity', {networkIdentity: networkIdentity}).toAll();
-    netframe.makeRPC('rpcCreateNetworkIdentity', [networkIdentity]);
 
     console.log('Telling clients to build tiles...');
     // Tell clients to update tiles
@@ -95,7 +84,7 @@ function clientConnected(client){
     // Create player
     createPlayer(server, client, networkIdentity.name, 90, {x:1,y:2});
 
-    if(rpcController.GetNetworkIdentities().length >= 2){
+    if(netframe.GetNetworkIdentities().length >= 2){
         spawnBox();
     }
 
@@ -139,7 +128,7 @@ function generateTiles(level){
 
 function spawnBox(){
     console.log('SpawnBox() called on server.');
-    let emptyTile = getRandomSpawnPoint();
+    let emptyTile = rpcController.getRandomSpawnPoint();
     if(!emptyTile) {
         console.log('No empty tile found.');
         return;

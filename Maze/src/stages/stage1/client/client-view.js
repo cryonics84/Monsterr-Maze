@@ -1,5 +1,5 @@
 import rpcController from '../controller/controller'
-
+import * as netframe from '../lib/netframe'
 let client;
 
 function init(c){
@@ -41,7 +41,7 @@ function createWall(x,y,size){
 }
 
 function createPlayerView(player){
-    let color = rpcController.GetNetworkIdentityFromClientId(player.owner).color;
+    let color = netframe.GetNetworkIdentityFromClientId(player.owner).color;
 
     let playerView = new fabric.Rect({
         width: tileSize, height: tileSize,

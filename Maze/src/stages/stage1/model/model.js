@@ -13,6 +13,7 @@ import compose from "lodash/fp/compose"
 import rpcController from '../controller/controller';
 import Entity from "../lib/entity";
 import {Mixin, mix} from "../lib/mixwith";
+import * as netframe from'../lib/netframe'
 
 let MoveMixin = Mixin((superclass) => class extends superclass{
     canMoveToPosition(destinationTile, velocity){
@@ -33,7 +34,7 @@ let MoveMixin = Mixin((superclass) => class extends superclass{
         //Check that there are no obstacles
         let tileObject;
         if(destinationTile.objectOnTileId) {
-            tileObject = rpcController.GetEntity(destinationTile.objectOnTileId);
+            tileObject = netframe.GetEntity(destinationTile.objectOnTileId);
         }
 
         if(tileObject){

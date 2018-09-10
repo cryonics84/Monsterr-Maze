@@ -1,5 +1,5 @@
 import model from '../model/model'
-
+import * as netframe from '../lib/netframe'
 const publicVars = {
     // We put it in the controller so that the model can access it
 // TODO: Model should not be dependent on the controller ! I don't know how to solve this atm.
@@ -12,15 +12,9 @@ const publicVars = {
 
 const Icontroller = {
     RpcMoveEntity: RpcMoveEntity,
-    RpcCreateNetworkIdentity: RpcCreateNetworkIdentity,
     RpcCreatePlayer: RpcCreatePlayer,
-    GetEntities: GetEntities,
     GetTiles: GetTiles,
     GetSpawnPoints: GetSpawnPoints,
-    GetNetworkIdentities: GetNetworkIdentities,
-    GetEntity: GetEntity,
-    GetNetworkIdentityFromClientId: GetNetworkIdentityFromClientId,
-    getEntitiesKeys: getEntitiesKeys,
     RpcCreateTile: RpcCreateTile,
     getNetworkIdentityColors: getNetworkIdentityColors,
     RpcCreateBox: RpcCreateBox,
@@ -31,10 +25,10 @@ const Icontroller = {
 };
 
 // List of network entities - <ID, entity>
-let entities = new Map();
+//let entities = new Map();
 
 // List of players
-let networkIdentities = [];
+//let networkIdentities = [];
 
 // 2D array of tiles
 let tiles = [];
@@ -56,10 +50,10 @@ function applyStateChanges(stateChanges){
         console.log('processing: ' + JSON.stringify(stateChanges[i]));
 
         //Override existing entity with new value
-        let existingEntity = entities.get(stateChanges[i].id);
+        let existingEntity = netframe.getEntities().get(stateChanges[i].id);
         console.log('Updating existing entity: ' + JSON.stringify(existingEntity));
         existingEntity = Object.assign(existingEntity, stateChanges[i]);
-        entities.set(stateChanges[i].id, existingEntity);
+        netframe.setEntity(stateChanges[i].id, existingEntity);
 
         changedEntities.push(existingEntity);
     }
@@ -71,7 +65,7 @@ function RpcMoveEntity(entity, direction){
     console.log('RpcMove() called with id: ' + JSON.stringify(entity) + ' and direction ' + JSON.stringify(direction));
     entity.move(direction);
 }
-
+/*
 function RpcCreateNetworkIdentity(identityId, clientId, name, color){
     console.log('RpcCreateNetworkIdentity called with identityId: ' + identityId + ', clientId: ' + clientId + 'name: ' + name + ', color: ' + color + ' Current network identities: ' + JSON.stringify(networkIdentities));
     let networkIdentity = new model.NetworkIdentity(identityId, clientId, name, color);
@@ -79,7 +73,7 @@ function RpcCreateNetworkIdentity(identityId, clientId, name, color){
     console.log('New set of network identities: ' + JSON.stringify(networkIdentities));
     return networkIdentity;
 }
-
+*/
 function RpcCreatePlayer(entityId, owner, name, health, position){
     console.log('RpcCreatePlayer called with owner: ' + owner + ', name: ' + name + ', health: ' + health + ', position: ' + position);
 
@@ -87,7 +81,7 @@ function RpcCreatePlayer(entityId, owner, name, health, position){
     console.log('Created player: ' + JSON.stringify(player) + ' with ID: ' + player.id);
 
     // Add entity to map
-    addEntity(player);
+    netframe.setEntity(player);
 
     //Change tile status(objectOnTileId)
     tiles[position.y][position.x].objectOnTileId = player.id;
@@ -98,18 +92,18 @@ function RpcCreatePlayer(entityId, owner, name, health, position){
 function RpcCreateBox(entityId, position){
     console.log('RpcCreateBox called with entityId: ' + entityId + ', position: ' + position);
     let box = new model.Box(entityId, position);
-    addEntity(box);
+    netframe.setEntity(box);
     tiles[position.y][position.x].objectOnTileId = box.id;
 
     return box;
 }
-
-function addEntity(entity){
+/*
+function setEntity(entity){
     entities.set(entity.id, entity);
     let keys =[ ...entities.keys() ];
     console.log('New set of entities: ' + keys);
 }
-
+*/
 function RpcCreateTile(entityId, type, position){
     console.log('creating tile: ' + entityId + ', type: ' + type + ', position: ' + JSON.stringify(position));
     //Create tile
@@ -120,7 +114,7 @@ function RpcCreateTile(entityId, type, position){
     }
 
     //Add to entities
-    addEntity(tile);
+    netframe.setEntity(tile);
 
     // Add to map
     tiles[position.y][position.x] = tile;
@@ -142,6 +136,7 @@ function GetSpawnPoints(){
     return spawnPoints;
 }
 
+/*
 function GetEntity(id){
     console.log('Searching for entity: ' + id);
     let entity = entities.get(id);
@@ -162,10 +157,12 @@ function GetNetworkIdentityFromClientId(clientId){
     console.log('Failed to find network identity belonging to clientId: ' + clientId);
     return null;
 }
-
+*/
+/*
 function getEntitiesKeys(){
     return Array.from( entities.keys() );
 }
+*/
 
 function getNetworkIdentityColors(){
     return networkIdentityColors;
