@@ -1,10 +1,7 @@
 import customServerEvents from './server-events'
-import {serverEvents  as netframeEvents} from '../lib/netframe'
+import {getCombinedServerEvents} from '../lib/netframe'
 import commands from './server-commands'
-
 import serverController from './server-controller'
-
-let combinedEvents = Object.assign(customServerEvents, netframeEvents);
 
 // Export stage as the default export
 export default {
@@ -12,7 +9,7 @@ export default {
   commands: commands,
 
   // Optionally define events
-  events: combinedEvents,
+  events: getCombinedServerEvents(customServerEvents),
 
   // Optionally define a setup method that is run before stage begins
   setup: (server) => {

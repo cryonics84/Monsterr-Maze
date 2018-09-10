@@ -1,4 +1,4 @@
-import rpcController from '../controller/controller'
+import rpcController from '../shared/controller/controller'
 
 
 const commands = {

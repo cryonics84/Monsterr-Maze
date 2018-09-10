@@ -1,4 +1,4 @@
-import rpcController from '../controller/controller';
+import rpcController from '../shared/controller/controller';
 import prox from "./proxy";
 
 // Base class that all entities inherit from
@@ -26,7 +26,6 @@ const Entity = (function() {
 
         stateChanged(){
             if(!_privateVariables.get(this).isDirty){
-                console.log('Setting dirty flag on: ' + this.id);
                 _privateVariables.get(this).isDirty = true;
                 rpcController.publicVars.stateChanges.push(this);
             }

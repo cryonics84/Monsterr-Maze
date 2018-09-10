@@ -11,46 +11,46 @@ import compose from "lodash/fp/compose"
 //import mix, {Entity} from './classMixer';
 
 import rpcController from '../controller/controller';
-import Entity from "../lib/entity";
-import {Mixin, mix} from "../lib/mixwith";
-import * as netframe from'../lib/netframe'
+import Entity from "../../lib/entity";
+import {Mixin, mix} from "../../lib/mixwith";
+import  {sharedInterface as netframe} from '../../lib/netframe'
 
 let MoveMixin = Mixin((superclass) => class extends superclass{
     canMoveToPosition(destinationTile, velocity){
-        console.log('canMoveToPosition() called on object: ' + JSON.stringify(this));
+        netframe.log('canMoveToPosition() called on object: ' + JSON.stringify(this));
 
         // Make sure that destination is valid tile
         if(!destinationTile){
-            console.log('Cannot move - destination tile invalid!');
+            netframe.log('Cannot move - destination tile invalid!');
             return false;
         }
 
         //Check that there is no wall
         if(destinationTile.type === 'w'){
-            console.log('Cannot move - reason: Wall on path.');
+            netframe.log('Cannot move - reason: Wall on path.');
             return false;
         }
 
         //Check that there are no obstacles
         let tileObject;
         if(destinationTile.objectOnTileId) {
-            tileObject = netframe.GetEntity(destinationTile.objectOnTileId);
+            tileObject = netframe.getEntity(destinationTile.objectOnTileId);
         }
 
         if(tileObject){
             //If there is - check if it's a player - we don't allow player collision
             if(tileObject instanceof Player){
-                console.log('Cannot move - reason: object on path.');
+                netframe.log('Cannot move - reason: object on path.');
                 return false;
 
             }
             //Check if we move onto a box
             else if(tileObject instanceof Box) {
-                console.log('We moved into a box - destinationTile.objectOnTileId: ' + destinationTile.objectOnTileId + ', this.id: ' + this.id);
+                netframe.log('We moved into a box - destinationTile.objectOnTileId: ' + destinationTile.objectOnTileId + ', this.id: ' + this.id);
 
                 // Check if box can be moved
                 if(!tileObject.move(velocity)){
-                    console.log('Cant move - something is blocking box...');
+                    netframe.log('Cant move - something is blocking box...');
                     return false;
                 }
             }
@@ -60,7 +60,7 @@ let MoveMixin = Mixin((superclass) => class extends superclass{
     }
     // Returns true if move was successful - false if not
     move( direction){
-        console.log('move() called on: ' + this);
+        netframe.log('move() called on: ' + this);
 
         let endPos = {x: this.position.x + direction.x, y: this.position.y + direction.y};
 
@@ -73,10 +73,10 @@ let MoveMixin = Mixin((superclass) => class extends superclass{
         }
 
         if(!this.canMoveToPosition(destinationTile, direction)){
-            console.log('Cannot move: ' + JSON.stringify(this));
+            netframe.log('Cannot move: ' + JSON.stringify(this));
             return false;
         }else{
-            console.log('Can move: ' + JSON.stringify(this));
+            netframe.log('Can move: ' + JSON.stringify(this));
         }
 
        //this.moveFromToTile(originTile, destinationTile);
@@ -87,7 +87,7 @@ let MoveMixin = Mixin((superclass) => class extends superclass{
         originTile.objectOnTileId = null;
         destinationTile.objectOnTileId = this.id;
 
-        console.log('Move successful - ' + JSON.stringify(this));
+        netframe.log('Move successful - ' + JSON.stringify(this));
 
         return true;
     }
@@ -100,7 +100,7 @@ let MoveMixin = Mixin((superclass) => class extends superclass{
         originTile.objectOnTileId = null;
         destinationTile.objectOnTileId = this;
 
-        console.log('New position of ' + this.name + ' is: ' + JSON.stringify(this.position));
+        netframe.log('New position of ' + this.name + ' is: ' + JSON.stringify(this.position));
     }*/
 });
 

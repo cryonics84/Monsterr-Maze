@@ -1,11 +1,10 @@
-import rpcController from '../controller/controller'
-import model from "../model/model";
+import rpcController from '../shared/controller/controller'
+import model from "../shared/model/model";
 import view from './client-view'
 import {hasMixin} from "../lib/mixwith";
-import * as netframe from '../lib/netframe'
+import {clientSharedInterface as netframe} from '../lib/netframe'
 
 let client;
-let clientId;
 let myPlayerID = 20;
 const Input = {LEFT: false, RIGHT: false, UP: false, DOWN: false};
 const Direction = { LEFT: 0, UP: 1, RIGHT: 2, DOWN: 3};
@@ -28,12 +27,14 @@ const rpcs = {
     rpcSetControlledEntity: rpcSetControlledEntity,
     rpcCreateBox: rpcCreateBox,
     rpcCreateTiles: rpcCreateTiles,
-    rpcSetClientId: rpcSetClientId
 }
 
 function init(c){
+    netframe.shouldLog(false);
+
     client = c;
-    console.log('Setting client ' + client + ' to ' + c);
+    netframe.log('Setting client ' + client + ' to ' + c);
+
     view.init(c);
     setupInputListener();
 
@@ -88,7 +89,7 @@ function setupInputListener(){
 
 function keyHandle(directionIndex){
     //let keyNames = Object.keys(Direction);
-    //console.log("Moving: " + keyNames[directionIndex] + " - value of: " + directionIndex);
+    //netframe.log("Moving: " + keyNames[directionIndex] + " - value of: " + directionIndex);
 
     let moveDirection = {};
 
@@ -112,7 +113,7 @@ function keyHandle(directionIndex){
 }
 
 function ClientConnected(){
-    console.log('client connected...');
+    netframe.log('client connected...');
     client.send('ClientConnected');
 }
 
@@ -130,43 +131,29 @@ function applyStates(states){
 }
 
 function CmdMove(direction){
-    console.log('sending cmdMove to server.');
+    netframe.log('sending cmdMove to server.');
     let data = {command: 'cmdMovePlayer', entityId: myPlayerID, params: [direction]};
     client.send('executeCmd', data);
 }
 
 function rpcSetControlledEntity(entityId){
     myPlayerID = entityId;
-    console.log('Setting myPlayerID: ' + myPlayerID);
+    netframe.log('Setting myPlayerID: ' + myPlayerID);
 }
 
-function getClientId(){
-    console.log('Getting clientId : ' + clientId);
-    return clientId;
-}
-
-function rpcSetClientId(id){
-    console.log('Setting clientId: ' + id);
-    clientId = id;
-}
-/*
-function rpcCreateNetworkIdentity(networkIdentity){
-    console.log('addNetworkIdentity() called with: ' + JSON.stringify(networkIdentity));
-    rpcController.RpcCreateNetworkIdentity(networkIdentity.identityId, networkIdentity.clientId, networkIdentity.name, networkIdentity.color);
-}*/
 
 function rpcCreatePlayer(entity){
-    console.log('addPlayer called with ' + JSON.stringify(entity) + ' with ID: ' + entity.id);
+    netframe.log('addPlayer called with ' + JSON.stringify(entity) + ' with ID: ' + entity.id);
     let player = rpcController.RpcCreatePlayer(entity.id, entity.owner, entity.name, entity.health, entity.position);
 
     // Set controlled unit
-    if(player.owner === clientId) myPlayerID = player.id;
+    if(player.owner === netframe.getClientId()) myPlayerID = player.id;
 
     view.createPlayerView(player);
 }
 
 function rpcCreateTiles(entityArr){
-    console.log('addTile called with tile array: ' + JSON.stringify(entityArr));
+    netframe.log('addTile called with tile array: ' + JSON.stringify(entityArr));
 
     for(let y = 0; y < entityArr.length; y++) {
         rpcController.GetTiles().push([]);
@@ -175,7 +162,7 @@ function rpcCreateTiles(entityArr){
             rpcController.RpcCreateTile(entityArr[y][x].id, entityArr[y][x].type, entityArr[y][x].position);
         }
     }
-    console.log('Current entities: ' + netframe.getEntitiesKeys());
+    netframe.log('Current entities: ' + netframe.getEntitiesKeys());
 
     // Make tile view
     view.createTilesView(rpcController.GetTiles());

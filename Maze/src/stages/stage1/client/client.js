@@ -1,9 +1,6 @@
 import customClientEvents from './client-events'
-import {clientEvents  as netframeEvents} from '../lib/netframe'
+import {getCombinedClientEvents} from '../lib/netframe'
 import clientController from './client-controller'
-
-let combinedEvents = Object.assign(customClientEvents, netframeEvents);
-
 
 /* globals fabric */
 
@@ -28,7 +25,7 @@ export default {
   },
 
   // Optionally define events
-  events: combinedEvents,
+  events: getCombinedClientEvents(customClientEvents),
 
   // Optionally define a setup method that is run before stage begins
   setup: (client) => {

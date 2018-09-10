@@ -1,5 +1,5 @@
-import rpcController from '../controller/controller'
-import * as netframe from '../lib/netframe'
+import rpcController from '../shared/controller/controller'
+import {sharedInterface as netframe} from '../lib/netframe'
 let client;
 
 function init(c){
@@ -12,7 +12,7 @@ let entityViewMap = new Map();
 
 function createTilesView(tiles){
 
-    console.log('Generating view tiles...');
+    netframe.log('Generating view tiles...');
 
     for(let y = 0; y < tiles.length; y++) {
 
@@ -26,7 +26,7 @@ function createTilesView(tiles){
             }
         }
     }
-    console.log('Finished generated view tiles...');
+    netframe.log('Finished generated view tiles...');
 }
 
 function createWall(x,y,size){
@@ -41,7 +41,7 @@ function createWall(x,y,size){
 }
 
 function createPlayerView(player){
-    let color = netframe.GetNetworkIdentityFromClientId(player.owner).color;
+    let color = netframe.getNetworkIdentityFromClientId(player.owner).color;
 
     let playerView = new fabric.Rect({
         width: tileSize, height: tileSize,
@@ -50,7 +50,7 @@ function createPlayerView(player){
         selectable: false,
         hoverCursor: 'cursor'
     });
-    console.log('Created PlayerView: ' + JSON.stringify(playerView));
+    netframe.log('Created PlayerView: ' + JSON.stringify(playerView));
     client.getCanvas().add(playerView);
 
     entityViewMap.set(player.id, playerView);
@@ -59,7 +59,7 @@ function createPlayerView(player){
 }
 
 function moveEntity(entity){
-    console.log('moveEntity() called on clientView with entity: ' + JSON.stringify(entity));
+    netframe.log('moveEntity() called on clientView with entity: ' + JSON.stringify(entity));
     let entityView = entityViewMap.get(entity.id);
     entityView.set({left: entity.position.x * tileSize, top: entity.position.y * tileSize});
     client.getCanvas().renderAll();
@@ -84,7 +84,7 @@ function createBoxView(box){
         selectable: false,
         hoverCursor: 'cursor'
     });
-    console.log('Created boxView: ' + JSON.stringify(boxView));
+    netframe.log('Created boxView: ' + JSON.stringify(boxView));
     client.getCanvas().add(boxView);
 
     entityViewMap.set(box.id, boxView);
