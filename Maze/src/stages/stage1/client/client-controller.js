@@ -30,8 +30,8 @@ const rpcs = {
 }
 
 function init(c){
-    netframe.shouldLog(false);
-
+    netframe.shouldLog(true);
+    netframe.addEntityChangeCallback(entityChangeViewUpdate);
     client = c;
     netframe.log('Setting client ' + client + ' to ' + c);
 
@@ -42,28 +42,17 @@ function init(c){
 
 }
 
+function removeInputListener(){
+    fabric.util.removeListener(document.body, 'keydown', keyDown);
+}
 
 function setupInputListener(){
+    //Remove any existing listener
+    removeInputListener();
+
     //Add input listener
-    fabric.util.addListener(document.body, 'keydown', function (options) {
-        if (options.repeat) {
-            return;
-        }
-        let key = options.which || options.key; // key detection
-        if (key === 37) { // handle Left key
-            keyHandle(Direction.LEFT);
-            Input.LEFT = true;
-        } else if (key === 38) { // handle Up key
-            keyHandle(Direction.UP);
-            Input.UP = true;
-        } else if (key === 39) { // handle Right key
-            keyHandle(Direction.RIGHT);
-            Input.RIGHT = true;
-        } else if (key === 40) { // handle Down key
-            keyHandle(Direction.DOWN);
-            Input.DOWN = true;
-        }
-    });
+    fabric.util.addListener(document.body, 'keydown', keyDown);
+
 /*
     fabric.util.addListener(document.body, 'keyup', function (options) {
         if (options.repeat) {
@@ -85,6 +74,26 @@ function setupInputListener(){
         }
 
     });*/
+}
+
+function keyDown(options){
+    if (options.repeat) {
+        //return;
+    }
+    let key = options.which || options.key; // key detection
+    if (key === 37) { // handle Left key
+        keyHandle(Direction.LEFT);
+        Input.LEFT = true;
+    } else if (key === 38) { // handle Up key
+        keyHandle(Direction.UP);
+        Input.UP = true;
+    } else if (key === 39) { // handle Right key
+        keyHandle(Direction.RIGHT);
+        Input.RIGHT = true;
+    } else if (key === 40) { // handle Down key
+        keyHandle(Direction.DOWN);
+        Input.DOWN = true;
+    }
 }
 
 function keyHandle(directionIndex){
@@ -117,17 +126,13 @@ function ClientConnected(){
     client.send('ClientConnected');
 }
 
-function applyStates(states){
-    let changedEntities = rpcController.applyStateChanges(states);
-
+function entityChangeViewUpdate(changedEntities){
     for(let i in changedEntities){
         if(hasMixin(changedEntities[i], model.MoveMixin)){
             view.updateEntity(changedEntities[i]);
         }
     }
-
     view.render();
-
 }
 
 function CmdMove(direction){
@@ -176,7 +181,6 @@ function rpcCreateBox(box){
 
 const IclientController = {
     init: init,
-    applyStates: applyStates,
     rpcs: rpcs
 }
 

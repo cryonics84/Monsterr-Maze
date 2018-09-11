@@ -1,62 +1,17 @@
 import model from '../model/model'
 import {sharedInterface as netframe} from '../../lib/netframe'
-const publicVars = {
-    // We put it in the controller so that the model can access it
-// TODO: Model should not be dependent on the controller ! I don't know how to solve this atm.
 
-    stateChanges: [],
-    stateHistory: [],
-    fullStateHistory: [],
-    timestamp: 0
-};
+//===============================================================
+// Variables
+//===============================================================
 
-const Icontroller = {
-    RpcMoveEntity: RpcMoveEntity,
-    RpcCreatePlayer: RpcCreatePlayer,
-    GetTiles: GetTiles,
-    GetSpawnPoints: GetSpawnPoints,
-    RpcCreateTile: RpcCreateTile,
-    getNetworkIdentityColors: getNetworkIdentityColors,
-    RpcCreateBox: RpcCreateBox,
-    GetRandomEmptyTile: GetRandomEmptyTile,
-    publicVars: publicVars,
-    applyStateChanges: applyStateChanges,
-    getRandomSpawnPoint: getRandomSpawnPoint
-};
-
-// List of network entities - <ID, entity>
-//let entities = new Map();
-
-// List of players
-//let networkIdentities = [];
-
-// 2D array of tiles
 let tiles = [];
-
-// List of spawn points
 let spawnPoints = [];
-
 let networkIdentityColors = ['red', 'yellow', 'white'];
 
-function applyStateChanges(stateChanges){
-    netframe.log('Called applyStateChanges on client'); //with stateChanges: ' + JSON.stringify(stateChanges));
-
-    let changedEntities = []
-
-    for(let i in stateChanges){
-        netframe.log('processing: ' + JSON.stringify(stateChanges[i]));
-
-        //Override existing entity with new value
-        let existingEntity = netframe.getEntities().get(stateChanges[i].id);
-        netframe.log('Updating existing entity: ' + JSON.stringify(existingEntity));
-        existingEntity = Object.assign(existingEntity, stateChanges[i]);
-        netframe.setEntity(stateChanges[i].id, existingEntity);
-
-        changedEntities.push(existingEntity);
-    }
-
-    return changedEntities;
-}
+//===============================================================
+// Methods
+//===============================================================
 
 function RpcMoveEntity(entity, direction){
     netframe.log('RpcMove() called with id: ' + JSON.stringify(entity) + ' and direction ' + JSON.stringify(direction));
@@ -151,5 +106,21 @@ function getRandomSpawnPoint(){
         return;
     }
 }
+
+//===============================================================
+// Interface
+//===============================================================
+
+const Icontroller = {
+    RpcMoveEntity: RpcMoveEntity,
+    RpcCreatePlayer: RpcCreatePlayer,
+    GetTiles: GetTiles,
+    GetSpawnPoints: GetSpawnPoints,
+    RpcCreateTile: RpcCreateTile,
+    getNetworkIdentityColors: getNetworkIdentityColors,
+    RpcCreateBox: RpcCreateBox,
+    GetRandomEmptyTile: GetRandomEmptyTile,
+    getRandomSpawnPoint: getRandomSpawnPoint
+};
 
 export default Icontroller;

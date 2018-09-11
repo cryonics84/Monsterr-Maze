@@ -2,7 +2,7 @@ import rpcController from '../shared/controller/controller';
 import serverController from '../server/server-controller';
 import clientController from '../client/client-controller'
 import model from "../shared/model/model";
-import customClientEvents from "../client/client-events";
+import {Events} from 'monsterr'
 
 //===============================================================
 // Server variables
@@ -11,6 +11,7 @@ let server;
 let entityCounter = 0;
 let updateCallbacks = [];
 let clientConnectCallbacks = [];
+let entityRemovedCallbacks = [];
 let timestamp = 0;
 let intervalId = -1;
 
@@ -26,12 +27,20 @@ const NetworkStates = { ENTERING_STAGE: 0, LOADING_LEVEL: 1, WAITING_TO_PLAY: 2,
 let networkIdentities = [];
 let entities = new Map();
 let logging = true;
+let clientStateChangeCallbacks = [];
 
 //===============================================================
 // public Server functions and events
 //===============================================================
 function init(serverInstance){
     server = serverInstance;
+
+    entityCounter = 0;
+    intervalId = -1;
+    timestamp = 0;
+    clientId = -1;
+    entities = new Map();
+    networkIdentities = [];
 }
 
 function startLoop(ms){
@@ -63,14 +72,14 @@ function makeRPC(rpc, params, clientId){
 }
 
 function clearStateChanges(){
-    let changedEntities = rpcController.publicVars.stateChanges;
+    let changedEntities = publicVars.stateChanges;
 
     for(let entityIndex in changedEntities){
         changedEntities[entityIndex].clearDirty();
     }
 
-    rpcController.publicVars.stateChanges = [];
-    log('Cleared stateChanges - length: ' + rpcController.publicVars.stateChanges.length);
+    publicVars.stateChanges = [];
+    log('Cleared stateChanges - length: ' + publicVars.stateChanges.length);
 }
 
 function addUpdateCallback(callback){
@@ -83,7 +92,10 @@ function removeUpdateCallback(callback){
 }
 
 function addClientConnectedCallback(callback){
-    clientConnectCallbacks.push(callback);
+    if(!clientConnectCallbacks.some(x => {return x === callback} )){
+        clientConnectCallbacks.push(callback);
+    }
+
 }
 
 function removeClientConnectedCallback(callback){
@@ -130,7 +142,7 @@ function executeCmdOnEntity(client, data){
 }
 
 function clientConnected(client){
-    log('clientConnected() called on server-controller...');
+    log('clientConnected() called on server-controller with client: ' + client);
     //makeRPC('rpcSetClientId', [client], client);
     server.send('setClientId', {clientId: client}).toClient(client);
 
@@ -151,20 +163,20 @@ function update(){
     timestamp++;
 
     //resolve all changes by updating clients
-    if(rpcController.publicVars.stateChanges.length > 0){
+    if(publicVars.stateChanges.length > 0){
         log('New state changes found...');
 
         //<entity, state>
-        let changedEntities = rpcController.publicVars.stateChanges;
+        let changedEntities = publicVars.stateChanges;
 
         // Make a deep copy of the changed entities - don't use Object.create() = shallow copy
         let data = {timestamp: timestamp, stateChanges: JSON.parse(JSON.stringify(changedEntities))};
         log('State data created: ' + JSON.stringify(data));
 
-        rpcController.publicVars.stateHistory.push(data);
-        //log('State history: ' + JSON.stringify(rpcController.publicVars.stateHistory));
+        publicVars.stateHistory.push(data);
+        //log('State history: ' + JSON.stringify(publicVars.stateHistory));
 
-        server.send('NewStateUpdate', data).toAll();
+        server.send('newStateUpdate', data).toAll();
 
         clearStateChanges();
     }
@@ -172,6 +184,48 @@ function update(){
     //invoke server updateloop
     updateCallbacks.forEach(callback => {callback()});
 }
+
+function getClass(obj) {
+    return obj.__proto__.constructor.name;
+}
+
+function getSerializedGameState(){
+    log('Serializing game state...');
+    let gameState = [];
+
+    for(let entity of entities.values()){
+        log('Serializing entity: ' + JSON.stringify(entity));
+        let entityJSON = JSON.parse(JSON.stringify(entity));
+        log('Constructor name: ' + getClass(entity));
+        entityJSON["_class"] = entity.constructor.name;
+        log('Finished serializing entity: ' + JSON.stringify(entity));
+        gameState.push(entityJSON);
+    }
+
+    log('Finished serializing game state...\n' + gameState);
+
+    let testObj1 = new TestClass();
+    console.log('testing 1 - ' + testObj1.getClassName() + ', CLASS: ' + TestClass.getClassName());
+    let testObj2 = new TestFunc();
+    console.log('testing 2 - ' + testObj2.constructor.name);
+    return gameState;
+}
+
+let TestFunc = function () {};
+
+class TestClass{
+    constructor(){
+        this.lol = this.constructor.name;
+    }
+    static getClassName(){ return 'TestClass'; }
+    getClassName(){ return this.lol; }
+}
+
+function sendGameStateToClient(client, gameState){
+    log('sendGameStateToClient() called with client: ' + client + ' and gameState:\n' + JSON.stringify(gameState));
+    server.send('newGameState', {gameState: gameState}).toClient(client);
+}
+
 
 //===============================================================
 // public Client functions
@@ -191,9 +245,25 @@ function executeRpc(data){
     clientController.rpcs[data.rpc](...data.params);
 }
 
+function addEntityChangeCallback(callback){
+    clientStateChangeCallbacks.push(callback);
+}
+
+function removeEntityChangeCallback(callback){
+    let index = clientStateChangeCallbacks.indexOf(callback);
+    clientStateChangeCallbacks.splice(index, 1);
+}
+
+function reconstructGameState(gameState){
+    log('Reconstructing game state...');
+    gameState.forEach(entity => log(JSON.stringify(entity) + '\n'));
+}
+
 const clientInterface = {
     getClientId: getClientId,
-    executeRpc: executeRpc
+    executeRpc: executeRpc,
+    addEntityChangeCallback: addEntityChangeCallback,
+    removeEntityChangeCallback: removeEntityChangeCallback
 }
 
 //===============================================================
@@ -204,9 +274,42 @@ function setClientId(id){
     clientId = id;
 }
 
+/**
+ * Dynamically create an object from a JSON string of properties.
+ * Assumes the presence of a _class meta-property that names the
+ * resulting class.
+ */
+function reconstitute(jsonString) {
+    let obj = JSON.parse(jsonString);
+    let cls = model[obj['_class']];
+    delete obj['_class'];  // remove meta-property
+    return Object.setPrototypeOf(obj, cls.prototype);
+}
+
 //===============================================================
 // public Shared functions
 //===============================================================
+function applyStateChanges(stateChanges){
+    log('Called applyStateChanges on client'); //with stateChanges: ' + JSON.stringify(stateChanges));
+
+    let changedEntities = []
+
+    for(let i in stateChanges){
+        log('processing: ' + JSON.stringify(stateChanges[i]));
+
+        //Override existing entity with new value
+        let existingEntity = getEntities().get(stateChanges[i].id);
+        log('Updating existing entity: ' + JSON.stringify(existingEntity));
+        existingEntity = Object.assign(existingEntity, stateChanges[i]);
+        setEntity(stateChanges[i].id, existingEntity);
+
+        changedEntities.push(existingEntity);
+    }
+
+    //invoke client view entityChange
+    clientStateChangeCallbacks.forEach(callback => {callback(changedEntities)});
+}
+
 function shouldLog(bool){
     logging = bool;
 }
@@ -254,7 +357,31 @@ function getNetworkIdentities(){
     return networkIdentities;
 }
 
+function getEntitiesOwnedBy(owner){
+    return entities.find(obj => {return obj.owner === owner});
+}
+
+function addEntitiesRemovedCallback(callback){
+    entityRemovedCallbacks.push(callback);
+}
+
+function removeEntitiesRemovedCallback(callback){
+    let index = entityRemovedCallbacks.indexOf(callback);
+    entityRemovedCallbacks.splice(index, 1);
+}
+
+const publicVars = {
+    // We put it in the controller so that the model can access it
+// TODO: Model should not be dependent on the controller ! I don't know how to solve this atm.
+
+    stateChanges: [],
+    stateHistory: [],
+    fullStateHistory: [],
+    timestamp: 0
+};
+
 export const sharedInterface = {
+    applyStateChanges: applyStateChanges,
     shouldLog: shouldLog,
     log: log,
     getEntities: getEntities,
@@ -262,7 +389,11 @@ export const sharedInterface = {
     getNetworkIdentityFromClientId: getNetworkIdentityFromClientId,
     getEntitiesKeys: getEntitiesKeys,
     setEntity: setEntity,
-    getNetworkIdentities: getNetworkIdentities
+    getNetworkIdentities: getNetworkIdentities,
+    getEntitiesOwnedBy: getEntitiesOwnedBy,
+    addEntitiesRemovedCallback: addEntitiesRemovedCallback,
+    removeEntitiesRemovedCallback: removeEntitiesRemovedCallback,
+    publicVars: publicVars
 };
 
 //===============================================================
@@ -276,6 +407,21 @@ function RpcCreateNetworkIdentity(identityId, clientId, name, color){
     log('New set of network identities: ' + JSON.stringify(networkIdentities));
     return networkIdentity;
 }
+function RpcRemoveEntities(entitiesId){
+    console.log('RpcRemoveEntities() called with: ' + entitiesId);
+
+    for(let index in entitiesId){
+        let entity = entities.get(entitiesId[index]);
+
+        // Tell server and client listeners that an entity is removed
+        entityRemovedCallbacks.forEach(callback => {callback(entity)});
+
+        //Remove entity from Map
+        entities.delete(entitiesId[index]);
+    }
+
+
+}
 
 //===============================================================
 // Events
@@ -287,9 +433,37 @@ const serverEvents = {
     },
     'ClientConnected': function (server, client, data) {
         server.log(data, {'client_id': client});
-        log('Received clientConnected event from client with ID' + client);
+        log('Received clientConnected event from client with ID: ' + client);
         clientConnected(client);
     },
+    [Events.CLIENT_RECONNECTED]: (monsterr, clientId) => {
+        console.log(clientId, 'reconnected! Hello there :-)');
+
+        setTimeout(function(){
+            sendGameStateToClient(clientId, getSerializedGameState())
+        }, 1000);
+        // Give client game state
+
+
+    },
+    [Events.CLIENT_DISCONNECTED]: (monsterr, clientId) => {
+        console.log(clientId, 'disconnected! Bye bye...');
+
+        //remove client owned assets
+
+        let entitiesId = [];
+        for (let [key, value] of entities.entries()) {
+            if(value.owner === clientId) entitiesId.push(key);
+        }
+        console.log('Removing entities: ' + entitiesId);
+        RpcRemoveEntities(entitiesId);
+        server.send('removeEntities', {entitiesId: entitiesId}).toAll();
+
+        //remove network identity
+        let networkIdentityIndex = networkIdentities.findIndex(obj => obj.clientId === clientId);
+        console.log('Removing network identity: ' + JSON.stringify(networkIdentities[networkIdentityIndex]));
+        networkIdentities.splice(networkIdentityIndex, 1);
+    }
 };
 
 const clientEvents = {
@@ -305,10 +479,29 @@ const clientEvents = {
         log('Received setClientId event from server with data: ' + JSON.stringify(data));
         setClientId(data.clientId);
     },
+    'newStateUpdate': function (client, data) {
+        log('Received newStateUpdate event from server with data: ' + JSON.stringify(data));
+        applyStateChanges(data.stateChanges);
+
+    },
+    'removeEntities': function (client, data) {
+        log('Received removeEntities event from server with data: ' + JSON.stringify(data));
+        RpcRemoveEntities(data.entitiesId);
+    },
+    'newGameState': function (client, data) {
+        log('Received newGameState event from server with data: ' + JSON.stringify(data));
+        reconstructGameState(data.gameState);
+    },
+
+
+};
+
+const serverCommands = {
+
 };
 
 //===============================================================
-// API
+// Interface
 //===============================================================
 // Shared functions are a part of the interface
 
@@ -322,6 +515,10 @@ export function getCombinedServerEvents(events){
 
 export function getCombinedClientEvents(events){
     return events ? Object.assign(events, clientEvents): clientEvents;
+}
+
+export function getCombinedServerCommands(commands){
+    return commands ? Object.assign(commands, serverCommands): serverCommands;
 }
 
 

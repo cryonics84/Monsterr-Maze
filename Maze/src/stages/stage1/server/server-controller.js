@@ -18,9 +18,6 @@ let level = [
     ['e', 'e', 'e', 'e', 'e', 'e', 'e']
 ];
 
-// 2D array of tiles
-let tiles = [];
-
 //===============================================================
 // Commands
 //===============================================================
@@ -49,9 +46,10 @@ const commands = {
 function init(serverInstance){
 
     // Setup and initiate NetFrame
-    netframe.shouldLog(false); // stop logging
+    netframe.shouldLog(true); // stop logging
     netframe.addUpdateCallback(update); // add update callback
     netframe.addClientConnectedCallback(clientConnected); // add client connected callback
+    netframe.addEntitiesRemovedCallback(entityRemoved);
     netframe.init(serverInstance); // set server reference
     netframe.startLoop(10); // start server update with X ms interval - stop again with stopLoop()
 
@@ -77,6 +75,13 @@ function clientConnected(client, networkIdentity){
     if(netframe.getNetworkIdentities().length >= 2){
         spawnBox();
     }
+
+}
+
+function entityRemoved(entity){
+    console.log('entityRemoved() called with: ' + JSON.stringify(entity));
+
+    //Check if moveable object - then we need to remove from tile.objectOnTile
 
 }
 
@@ -107,7 +112,6 @@ function generateTiles(level){
             rpcController.RpcCreateTile(netframe.createNewEntityId(), levelXarr[x], {x: x, y: y});
         }
     }
-    netframe.log('Finished generated tiles: ' + JSON.stringify(tiles));
 }
 
 // Interval server function to create a box and tell clients to do the same

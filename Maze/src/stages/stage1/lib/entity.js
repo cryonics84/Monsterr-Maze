@@ -1,5 +1,6 @@
 import rpcController from '../shared/controller/controller';
 import prox from "./proxy";
+import {sharedInterface as netframe} from "./netframe";
 
 // Base class that all entities inherit from
 const Entity = (function() {
@@ -27,7 +28,7 @@ const Entity = (function() {
         stateChanged(){
             if(!_privateVariables.get(this).isDirty){
                 _privateVariables.get(this).isDirty = true;
-                rpcController.publicVars.stateChanges.push(this);
+                netframe.publicVars.stateChanges.push(this);
             }
         }
     }

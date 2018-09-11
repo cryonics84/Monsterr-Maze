@@ -4,6 +4,8 @@ let client;
 
 function init(c){
     client = c;
+
+    entityViewMap = new Map();
 }
 
 const tileSize = 30;
