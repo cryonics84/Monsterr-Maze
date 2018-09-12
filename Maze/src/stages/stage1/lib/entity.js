@@ -13,9 +13,10 @@ const Entity = (function() {
             _privateVariables.set(this, {isDirty: false}); //private
             this.id = entityId;
             this.owner = owner;
-
+            this.classConstructor = "test";
             return new prox(this);
         }
+
 
         getDirty() {
             return _privateVariables.get(this).isDirty;
@@ -34,5 +35,22 @@ const Entity = (function() {
     }
     return Entity;
 })();
+
+export class NetworkIdentity {
+
+    constructor(identityId, clientId, name, color){
+        this.identityId = identityId;
+        this.clientId = clientId;
+        this.name = name;
+        this.color = color;
+        this.state = NetworkStates.JOINED;
+    }
+}
+
+// JOINED => LOADING
+// LOADING => WAITING || PLAYING
+// PLAYING => DISCONNECTED || FINISHED
+// DISCONNECTED => JOINED
+export const NetworkStates = { JOINED: 0, LOADING: 1, WAITING: 2, PLAYING: 3, DISCONNECTED: 4, FINISHED: 5};
 
 export default Entity;

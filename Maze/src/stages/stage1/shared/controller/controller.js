@@ -25,7 +25,7 @@ function RpcCreatePlayer(entityId, owner, name, health, position){
     netframe.log('Created player: ' + JSON.stringify(player) + ' with ID: ' + player.id);
 
     // Add entity to map
-    netframe.setEntity(player);
+    netframe.updateEntity(player.id, player);
 
     //Change tile status(objectOnTileId)
     tiles[position.y][position.x].objectOnTileId = player.id;
@@ -36,7 +36,7 @@ function RpcCreatePlayer(entityId, owner, name, health, position){
 function RpcCreateBox(entityId, position){
     netframe.log('RpcCreateBox called with entityId: ' + entityId + ', position: ' + position);
     let box = new model.Box(entityId, position);
-    netframe.setEntity(box);
+    netframe.updateEntity(box.id, box);
     tiles[position.y][position.x].objectOnTileId = box.id;
 
     return box;
@@ -52,7 +52,7 @@ function RpcCreateTile(entityId, type, position){
     }
 
     //Add to entities
-    netframe.setEntity(tile);
+    netframe.updateEntity(tile.id, tile);
 
     // Add to map
     tiles[position.y][position.x] = tile;

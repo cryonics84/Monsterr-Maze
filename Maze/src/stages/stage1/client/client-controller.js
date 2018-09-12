@@ -9,19 +9,6 @@ let myPlayerID = 20;
 const Input = {LEFT: false, RIGHT: false, UP: false, DOWN: false};
 const Direction = { LEFT: 0, UP: 1, RIGHT: 2, DOWN: 3};
 
-// List of network entities - <ID, entity>
-let entities = new Map();
-
-// List of players
-let networkIdentities = new Map();
-
-// 2D array of tiles
-let tiles = [];
-
-// List of spawn points
-let spawnPoints = [];
-
-
 const rpcs = {
     rpcCreatePlayer: rpcCreatePlayer,
     rpcSetControlledEntity: rpcSetControlledEntity,
@@ -31,7 +18,11 @@ const rpcs = {
 
 function init(c){
     netframe.shouldLog(true);
-    netframe.addEntityChangeCallback(entityChangeViewUpdate);
+    netframe.addCreateEntityCallback(createEntity);
+    netframe.addUpdateEntityCallback(updateEntity);
+    netframe.addEndStageCallback(endStage);
+    netframe.init();
+
     client = c;
     netframe.log('Setting client ' + client + ' to ' + c);
 
@@ -40,6 +31,16 @@ function init(c){
 
     ClientConnected();
 
+}
+
+function endStage(){
+    netframe.log('endStage() called..');
+    removeInputListener();
+    view.reset();
+    netframe.removeCreateEntityCallback(createEntity);
+    netframe.removeUpdateEntityCallback(updateEntity);
+    netframe.removeEndStageCallback(endStage);
+    netframe.reset();
 }
 
 function removeInputListener(){
@@ -126,15 +127,6 @@ function ClientConnected(){
     client.send('ClientConnected');
 }
 
-function entityChangeViewUpdate(changedEntities){
-    for(let i in changedEntities){
-        if(hasMixin(changedEntities[i], model.MoveMixin)){
-            view.updateEntity(changedEntities[i]);
-        }
-    }
-    view.render();
-}
-
 function CmdMove(direction){
     netframe.log('sending cmdMove to server.');
     let data = {command: 'cmdMovePlayer', entityId: myPlayerID, params: [direction]};
@@ -145,7 +137,6 @@ function rpcSetControlledEntity(entityId){
     myPlayerID = entityId;
     netframe.log('Setting myPlayerID: ' + myPlayerID);
 }
-
 
 function rpcCreatePlayer(entity){
     netframe.log('addPlayer called with ' + JSON.stringify(entity) + ' with ID: ' + entity.id);
@@ -178,6 +169,45 @@ function rpcCreateBox(box){
     view.createBoxView(box);
 }
 
+function createEntity(entity){
+    netframe.log('createEntity was called on client-controller with entity: ' + JSON.stringify(entity));
+
+    switch (getType(entity)) {
+
+        case 'Player':
+            netframe.log('Entity is PLAYER');
+
+            if(entity.owner === netframe.getClientId()) {
+                netframe.log('Setting rpcSetControlledEntity...');
+                rpcSetControlledEntity(entity.id);
+            }
+
+            view.createPlayerView(entity);
+            break;
+        case 'Tile':
+            netframe.log('Entity is TILE');
+            if(entity.type === 'w') view.createTileView(entity);
+            break;
+        case 'Box':
+            netframe.log('Entity is BOX');
+            view.createBoxView(entity);
+            break;
+        default:
+            netframe.log('Entity is UNKNOWN Class');
+            break;
+    }
+}
+
+function updateEntity(entity){
+    netframe.log('updateEntity() called on: ' + JSON.stringify(entity));
+    if(entity instanceof model.MovableObject){
+        view.moveEntity(entity);
+    }
+}
+
+function getType(entity){
+    return netframe.getModelMap().get(entity.constructor);
+}
 
 const IclientController = {
     init: init,

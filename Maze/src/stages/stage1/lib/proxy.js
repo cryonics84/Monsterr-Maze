@@ -1,6 +1,9 @@
 const proxy = function(object) {
     const handler = {
         get(target, property, receiver) {
+            if (property === 'constructor') {
+                return object.constructor;
+            }
             try {
                 return new Proxy(target[property], handler);
             } catch (err) {
@@ -10,7 +13,8 @@ const proxy = function(object) {
         set(obj, prop, value) {
             object.stateChanged();
             return Reflect.set(...arguments);
-        }
+        },
+
     };
 
     return new Proxy(object, handler);

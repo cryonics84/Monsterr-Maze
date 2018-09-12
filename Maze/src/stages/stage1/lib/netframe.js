@@ -3,36 +3,42 @@ import serverController from '../server/server-controller';
 import clientController from '../client/client-controller'
 import model from "../shared/model/model";
 import {Events} from 'monsterr'
+import {NetworkIdentity} from "./entity";
 
 //===============================================================
 // Server variables
 //===============================================================
 let server;
 let entityCounter = 0;
+let timestamp = 0;
+let intervalId = -1;
+
+// Callbacks
 let updateCallbacks = [];
 let clientConnectCallbacks = [];
 let entityRemovedCallbacks = [];
-let timestamp = 0;
-let intervalId = -1;
+let createEntityCallbacks = [];
+let updateEntityCallbacks = [];
 
 //===============================================================
 // Client variables
 //===============================================================
 let clientId = -1;
+let endStageCallbacks = [];
 
 //===============================================================
 // Shared variables
 //===============================================================
-const NetworkStates = { ENTERING_STAGE: 0, LOADING_LEVEL: 1, WAITING_TO_PLAY: 2, PLAYING: 3, DISCONNECTED: 4};
+
 let networkIdentities = [];
 let entities = new Map();
 let logging = true;
-let clientStateChangeCallbacks = [];
+let modelMap = new Map(); //<compiled class name, real class name>
 
 //===============================================================
 // public Server functions and events
 //===============================================================
-function init(serverInstance){
+function initServer(serverInstance){
     server = serverInstance;
 
     entityCounter = 0;
@@ -41,6 +47,8 @@ function init(serverInstance){
     clientId = -1;
     entities = new Map();
     networkIdentities = [];
+
+    generateModelMap();
 }
 
 function startLoop(ms){
@@ -104,7 +112,7 @@ function removeClientConnectedCallback(callback){
 }
 
 const serverInterface = {
-    init: init,
+    init: initServer,
     startLoop: startLoop,
     stopLoop: stopLoop,
     makeRPC: makeRPC,
@@ -143,9 +151,26 @@ function executeCmdOnEntity(client, data){
 
 function clientConnected(client){
     log('clientConnected() called on server-controller with client: ' + client);
-    //makeRPC('rpcSetClientId', [client], client);
+
     server.send('setClientId', {clientId: client}).toClient(client);
 
+    //Check if client was already connected, else create network ID
+    let networkIdentity = networkIdentities.find(networkIdentity => networkIdentity.clientId === client);
+    if(networkIdentity){
+        //Client exists so we feed him game state
+        log('Existing client.');
+        //send him networkIdentities
+        networkIdentities.forEach(networkIdentity => server.send('createNetworkIdentity', {networkIdentity: networkIdentity}).toClient(client));
+
+        sendGameStateToClient(client, getSerializedGameState());
+    }else{
+        // Client needs new network identity
+        log('New client');
+        createNetworkIdentity(client)
+    }
+}
+
+function createNetworkIdentity(client){
     let randomName = Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 5);
 
     log('Creating network identity...');
@@ -166,17 +191,10 @@ function update(){
     if(publicVars.stateChanges.length > 0){
         log('New state changes found...');
 
-        //<entity, state>
-        let changedEntities = publicVars.stateChanges;
-
-        // Make a deep copy of the changed entities - don't use Object.create() = shallow copy
-        let data = {timestamp: timestamp, stateChanges: JSON.parse(JSON.stringify(changedEntities))};
-        log('State data created: ' + JSON.stringify(data));
-
+        let serializedStateChanges = publicVars.stateChanges.map(x => getSerializedEntity(x));
+        let data = {gameState: serializedStateChanges};
         publicVars.stateHistory.push(data);
-        //log('State history: ' + JSON.stringify(publicVars.stateHistory));
-
-        server.send('newStateUpdate', data).toAll();
+        server.send('newGameState', data).toAll();
 
         clearStateChanges();
     }
@@ -185,40 +203,26 @@ function update(){
     updateCallbacks.forEach(callback => {callback()});
 }
 
-function getClass(obj) {
-    return obj.__proto__.constructor.name;
-}
-
 function getSerializedGameState(){
     log('Serializing game state...');
+
     let gameState = [];
-
     for(let entity of entities.values()){
-        log('Serializing entity: ' + JSON.stringify(entity));
-        let entityJSON = JSON.parse(JSON.stringify(entity));
-        log('Constructor name: ' + getClass(entity));
-        entityJSON["_class"] = entity.constructor.name;
-        log('Finished serializing entity: ' + JSON.stringify(entity));
-        gameState.push(entityJSON);
+        gameState.push(getSerializedEntity(entity));
     }
-
-    log('Finished serializing game state...\n' + gameState);
-
-    let testObj1 = new TestClass();
-    console.log('testing 1 - ' + testObj1.getClassName() + ', CLASS: ' + TestClass.getClassName());
-    let testObj2 = new TestFunc();
-    console.log('testing 2 - ' + testObj2.constructor.name);
+    log('Finished serializing game state:\n' + JSON.stringify(gameState));
     return gameState;
 }
 
-let TestFunc = function () {};
-
-class TestClass{
-    constructor(){
-        this.lol = this.constructor.name;
-    }
-    static getClassName(){ return 'TestClass'; }
-    getClassName(){ return this.lol; }
+function getSerializedEntity(entity){
+    console.log('Serializing entity: ' + JSON.stringify(entity));
+    let entityJSON = JSON.parse(JSON.stringify(entity));
+    log(entity.constructor);
+    let className =  modelMap.get(entity.constructor);
+    log('className: ' + JSON.stringify(className));
+    entityJSON["_class"] = className;
+    log('Finished serializing entity: ' + JSON.stringify(entityJSON));
+    return entityJSON;
 }
 
 function sendGameStateToClient(client, gameState){
@@ -230,6 +234,11 @@ function sendGameStateToClient(client, gameState){
 //===============================================================
 // public Client functions
 //===============================================================
+
+function initClient(){
+    generateModelMap();
+}
+
 function getClientId(){
     log('Getting clientId : ' + clientId);
     return clientId;
@@ -245,25 +254,66 @@ function executeRpc(data){
     clientController.rpcs[data.rpc](...data.params);
 }
 
-function addEntityChangeCallback(callback){
-    clientStateChangeCallbacks.push(callback);
+function addCreateEntityCallback(callback){
+    createEntityCallbacks.push(callback);
 }
 
-function removeEntityChangeCallback(callback){
-    let index = clientStateChangeCallbacks.indexOf(callback);
-    clientStateChangeCallbacks.splice(index, 1);
+function removeCreateEntityCallback(callback){
+    let index = createEntityCallbacks.indexOf(callback);
+    createEntityCallbacks.splice(index, 1);
+}
+
+function addUpdateEntityCallback(callback){
+    updateEntityCallbacks.push(callback);
+}
+
+function removeUpdateEntityCallback(callback){
+    let index = updateEntityCallbacks.indexOf(callback);
+    updateEntityCallbacks.splice(index, 1);
 }
 
 function reconstructGameState(gameState){
     log('Reconstructing game state...');
-    gameState.forEach(entity => log(JSON.stringify(entity) + '\n'));
+    let entities = gameState.map(state => reconstitute(state));
+
+    log('Reconstruction finished. Updating entities...');
+    entities.forEach(entity => {
+        log('Updating: ' + entity.id);
+        updateEntity(entity.id, entity);
+    });
+}
+
+function getModelMap(){
+    return modelMap;
+}
+
+function addEndStageCallback(callback){
+    endStageCallbacks.push(callback);
+}
+
+function removeEndStageCallback(callback){
+    let index = endStageCallbacks.indexOf(callback);
+    endStageCallbacks.splice(index, 1);
+}
+
+function resetClient(){
+    modelMap = new Map();
+    entities = new Map();
+    networkIdentities = [];
 }
 
 const clientInterface = {
     getClientId: getClientId,
     executeRpc: executeRpc,
-    addEntityChangeCallback: addEntityChangeCallback,
-    removeEntityChangeCallback: removeEntityChangeCallback
+    addCreateEntityCallback: addCreateEntityCallback,
+    removeCreateEntityCallback: removeCreateEntityCallback,
+    addUpdateEntityCallback: addUpdateEntityCallback,
+    removeUpdateEntityCallback: removeUpdateEntityCallback,
+    getModelMap: getModelMap,
+    init: initClient,
+    reset: resetClient,
+    addEndStageCallback: addEndStageCallback,
+    removeEndStageCallback: removeEndStageCallback
 }
 
 //===============================================================
@@ -279,9 +329,11 @@ function setClientId(id){
  * Assumes the presence of a _class meta-property that names the
  * resulting class.
  */
-function reconstitute(jsonString) {
-    let obj = JSON.parse(jsonString);
+function reconstitute(obj) {
+    log('reconstituting called on: ' + JSON.stringify(obj));
     let cls = model[obj['_class']];
+    log('found class: ' + cls);
+
     delete obj['_class'];  // remove meta-property
     return Object.setPrototypeOf(obj, cls.prototype);
 }
@@ -289,26 +341,6 @@ function reconstitute(jsonString) {
 //===============================================================
 // public Shared functions
 //===============================================================
-function applyStateChanges(stateChanges){
-    log('Called applyStateChanges on client'); //with stateChanges: ' + JSON.stringify(stateChanges));
-
-    let changedEntities = []
-
-    for(let i in stateChanges){
-        log('processing: ' + JSON.stringify(stateChanges[i]));
-
-        //Override existing entity with new value
-        let existingEntity = getEntities().get(stateChanges[i].id);
-        log('Updating existing entity: ' + JSON.stringify(existingEntity));
-        existingEntity = Object.assign(existingEntity, stateChanges[i]);
-        setEntity(stateChanges[i].id, existingEntity);
-
-        changedEntities.push(existingEntity);
-    }
-
-    //invoke client view entityChange
-    clientStateChangeCallbacks.forEach(callback => {callback(changedEntities)});
-}
 
 function shouldLog(bool){
     logging = bool;
@@ -349,8 +381,19 @@ function getEntitiesKeys(){
     return Array.from( entities.keys() );
 }
 
-function setEntity(entity){
-    entities.set(entity.id, entity);
+function updateEntity(entityId, entity){
+    // check if entity already exists - if not we need to create it aka. calling view
+    if(entities.has(entityId)){
+        //Key exist - Update it
+        log('Entity exist.');
+        entities.set(entityId, entity);
+        updateEntityCallbacks.forEach(callback => {callback(entity)});
+    }else{
+        //Key does not exist - Create it
+        log('Entity does not exist.')
+        entities.set(entityId, entity);
+        createEntityCallbacks.forEach(callback => callback(entity));
+    }
 }
 
 function getNetworkIdentities(){
@@ -381,14 +424,13 @@ const publicVars = {
 };
 
 export const sharedInterface = {
-    applyStateChanges: applyStateChanges,
     shouldLog: shouldLog,
     log: log,
     getEntities: getEntities,
     getEntity: getEntity,
     getNetworkIdentityFromClientId: getNetworkIdentityFromClientId,
     getEntitiesKeys: getEntitiesKeys,
-    setEntity: setEntity,
+    updateEntity: updateEntity,
     getNetworkIdentities: getNetworkIdentities,
     getEntitiesOwnedBy: getEntitiesOwnedBy,
     addEntitiesRemovedCallback: addEntitiesRemovedCallback,
@@ -402,7 +444,7 @@ export const sharedInterface = {
 // Create a network identity
 function RpcCreateNetworkIdentity(identityId, clientId, name, color){
     log('RpcCreateNetworkIdentity called with identityId: ' + identityId + ', clientId: ' + clientId + 'name: ' + name + ', color: ' + color + ' Current network identities: ' + JSON.stringify(networkIdentities));
-    let networkIdentity = new model.NetworkIdentity(identityId, clientId, name, color);
+    let networkIdentity = new NetworkIdentity(identityId, clientId, name, color);
     networkIdentities.push(networkIdentity);
     log('New set of network identities: ' + JSON.stringify(networkIdentities));
     return networkIdentity;
@@ -422,7 +464,19 @@ function RpcRemoveEntities(entitiesId){
 
 
 }
+function generateModelMap(){
+    log('Generating modelMap...');
+    for(let key in model) {
+        let value = model[key];
+        log('\nKey: ' + key + ', \nValue:' + value);
+        modelMap.set(value, key);
+    }
 
+    log('Finished generating modelMap: \n');
+    for(let [key,value] of modelMap){
+        log('Key: ' + key + ', Value: ' + value);
+    }
+}
 //===============================================================
 // Events
 //===============================================================
@@ -437,13 +491,12 @@ const serverEvents = {
         clientConnected(client);
     },
     [Events.CLIENT_RECONNECTED]: (monsterr, clientId) => {
-        console.log(clientId, 'reconnected! Hello there :-)');
+        log(clientId, 'reconnected! Hello there :-)');
 
+        // Set client state to server stage - this will invoke ClientConnected event on Client
         setTimeout(function(){
-            sendGameStateToClient(clientId, getSerializedGameState())
+            server.send(Events.START_STAGE, server.getCurrentStage().number).toClient(clientId)
         }, 1000);
-        // Give client game state
-
 
     },
     [Events.CLIENT_DISCONNECTED]: (monsterr, clientId) => {
@@ -492,6 +545,10 @@ const clientEvents = {
         log('Received newGameState event from server with data: ' + JSON.stringify(data));
         reconstructGameState(data.gameState);
     },
+    [Events.END_STAGE]: (monsterr, clientId) => {
+        log('Stage Ended...');
+        endStageCallbacks.forEach(callback => {callback()});
+    }
 
 
 };

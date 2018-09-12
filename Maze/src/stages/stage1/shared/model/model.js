@@ -132,57 +132,35 @@ class MovableObject extends mix(Entity).with(MoveMixin){
 }
 
 
-let Player = (function(){
-    class Player extends MovableObject{
+class Player extends MovableObject{
 
-        constructor(entityId, owner, name, health, position) {
-            super(entityId, owner, position);
-            this.name = name; //public
-            this.health = health; //public
+    constructor(entityId, owner, name, health, position) {
+        super(entityId, owner, position);
+        this.name = name; //public
+        this.health = health; //public
 
-            //withGetterSetter(this);
-        }
+        //withGetterSetter(this);
+    }
+
+}
+
+class Box extends MovableObject{
+    constructor(entityId, position){
+        super(entityId, null, position);
+    }
+}
+
+class Tile extends Entity{
+
+    constructor(entityId, type, position){
+        super(entityId, null);
+        this.type = type;
+        this.position = position;
+        this.objectOnTileId = null;
 
     }
-    return Player;
-})();
+}
 
-let Box = (function(){
-    class Box extends MovableObject{
-        constructor(entityId, position){
-            super(entityId, null, position);
-
-        }
-    }
-    return Box;
-})();
-
-let Tile = (function(){
-    class Tile extends Entity{
-
-        constructor(entityId, type, position){
-            super(entityId, null);
-            this.type = type;
-            this.position = position;
-            this.objectOnTileId = null;
-
-        }
-    }
-    return Tile;
-})();
-
-let NetworkIdentity = (function(){
-    class NetworkIdentity {
-
-        constructor(identityId, clientId, name, color){
-            this.identityId = identityId;
-            this.clientId = clientId;
-            this.name = name;
-            this.color = color;
-        }
-    }
-    return NetworkIdentity;
-})();
 
 
 const IModel = {
@@ -190,8 +168,7 @@ const IModel = {
     Box: Box,
     Tile: Tile,
     MoveMixin: MoveMixin,
-    MovableObject: MovableObject,
-    NetworkIdentity: NetworkIdentity
+    MovableObject: MovableObject
 }
 
 export default IModel;

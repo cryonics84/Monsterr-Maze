@@ -12,34 +12,19 @@ const tileSize = 30;
 
 let entityViewMap = new Map();
 
-function createTilesView(tiles){
+function createTileView(tile){
 
-    netframe.log('Generating view tiles...');
-
-    for(let y = 0; y < tiles.length; y++) {
-
-        for(let x = 0; x < tiles[y].length; x++) {
-
-            //check if its a wall
-            if(tiles[y][x].type === 'w'){
-                let wall = createWall(x,y, tileSize);
-                tiles[y][x].gameObject = wall;
-                client.getCanvas().add(wall);
-            }
-        }
-    }
-    netframe.log('Finished generated view tiles...');
-}
-
-function createWall(x,y,size){
-    let wall = new fabric.Rect({
-        width: size, height: size,
-        left: x*size, top: y*size,
+    let tileView = new fabric.Rect({
+        width: tileSize, height: tileSize,
+        left: tile.position.x * tileSize, top: tile.position.y *tileSize,
         fill: 'black',
         selectable: false,
         hoverCursor: 'cursor'
     });
-    return wall;
+
+    client.getCanvas().add(tileView);
+    entityViewMap.set(tile.id, tileView);
+    netframe.log('Finished generated view tiles...');
 }
 
 function createPlayerView(player){
@@ -94,15 +79,19 @@ function createBoxView(box){
     return boxView;
 }
 
+function reset() {
+    entityViewMap = new Map();
+}
+
 const Iview = {
     init: init,
-    createTilesView: createTilesView,
     createPlayerView: createPlayerView,
-    createWall: createWall,
+    createTileView: createTileView,
     moveEntity: moveEntity,
     createBoxView: createBoxView,
     updateEntity: updateEntity,
-    render: render
+    render: render,
+    reset: reset
 }
 
 export default Iview;

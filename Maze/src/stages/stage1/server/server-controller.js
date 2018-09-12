@@ -55,7 +55,7 @@ function init(serverInstance){
 
     //server generates level on startup
     generateTiles(level);
-    netframe.clearStateChanges();
+    //netframe.clearStateChanges();
 }
 
 // Gets called from netframe after each update
@@ -66,7 +66,7 @@ function clientConnected(client, networkIdentity){
     netframe.log('clientConnected() called on server-controller...');
 
     // Tell clients to make tiles
-    netframe.makeRPC('rpcCreateTiles', [rpcController.GetTiles()]);
+    //netframe.makeRPC('rpcCreateTiles', [rpcController.GetTiles()]);
 
     // Create player
     createPlayer(client, networkIdentity.name, 90, {x:1,y:2});
@@ -98,7 +98,7 @@ function createPlayer(owner, name, health){
 
     let player = rpcController.RpcCreatePlayer(entityId, owner, name, health, position);
 
-    netframe.makeRPC('rpcCreatePlayer', [player]);
+    //netframe.makeRPC('rpcCreatePlayer', [player]);
 }
 
 function generateTiles(level){
