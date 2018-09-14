@@ -16,7 +16,7 @@ RPC
 
 CLIENT SIDE
 -----------------------------------------------------------
-function init:
+######function init:
 - setup with callbacks (createEntity, updateEntity, endStage).
 - init netframe
 
