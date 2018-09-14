@@ -62,6 +62,8 @@ netframe.makeCmd(command, params, entityId);
 - params: array of parameters to pass to the function. Ex: [direction]
 - entityId: entity to perform command on. client has to own it. Ex: controlledEntity
 
+### Client methods
+
 #### function init:
 - setup with callbacks (createEntity, updateEntity, endStage).
 - init netframe
@@ -69,8 +71,6 @@ netframe.makeCmd(command, params, entityId);
 #### function endStage:
 - remove callbacks
 - clear view
-
-### Client methods
 
 #### function createEntity(entity):
 - Callback for when an entity is created in the model. Used to update View with new object.
