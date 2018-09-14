@@ -22,6 +22,7 @@ RPC
 
 #### function clientConnected(client, networkIdentity)
 - Callback called when client joined stage.
+- Useful for instantiating Entities belonging to a specific player, such as units, cards etc.
 - Passes a Network Identity unique for that client. Can be used to store information about that client, such as: Name, connection status, playerNumber.
 
 #### function entityRemoved
