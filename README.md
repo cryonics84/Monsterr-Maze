@@ -6,13 +6,14 @@ SHARED BETWEEN SERVER AND CLIENT
 Parent object that all game objects inherits from.
 Simply extend your class from Entity, and NetFrame will offer a set of services such as, an unique identifier, client-ownership and automatic syncing.
 
-```class Tile extends Entity{
+```
+class Tile extends Entity{
 
     constructor(entityId, type, position){
         super(entityId, null);
     }
 }
-´´´
+```
 
 #### Entity Methods
 - get specific entity with: ```netframe.getEntity(id)```
