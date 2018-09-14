@@ -12,7 +12,20 @@ RPC
 - params: array of parameters to pass to the function.
 - clientId: OPTIONAL paramater - send to specific client. If left out, it will send to ALL clients.
 
+#### function init:
+- setup with callbacks (createEntity, updateEntity, endStage).
+- init netframe
+- start netframe gameloop with ``` netframe.startLoop(ms) ```
 
+#### function update
+- Callback that gets called from netframe after each update
+
+#### function clientConnected
+- Callback called when client joined stage.
+- Add to server-controller interface.
+
+#### function entityRemoved
+- Callback called when entity was removed (ex. after disconnect).
 
 CLIENT SIDE
 -----------------------------------------------------------
