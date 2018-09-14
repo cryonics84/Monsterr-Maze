@@ -16,27 +16,28 @@ RPC
 
 CLIENT SIDE
 -----------------------------------------------------------
-######function init:
+#### function init:
 - setup with callbacks (createEntity, updateEntity, endStage).
 - init netframe
 
-function endStage:
+#### function endStage:
 - remove callbacks
 - clear view
 
-function createEntity(entity):
+#### function createEntity(entity):
 - Callback for when an entity is created in the model. Used to update View with new object.
 - Do switch (netframe.getClassNameOfEntity(entity)) to check what kind of Class entity belongs to.
 
 Ex:
+```
 switch (netframe.getClassNameOfEntity(entity)) {
 
         case 'Player':
             netframe.log('Entity is PLAYER');
             view.createPlayerView(entity);
             
-
-function updateEntity(entity){
+```
+#### function updateEntity(entity){
 - callback for when an entity is updated in the model. Used to update existing object in view.
 
 Ex:
@@ -44,6 +45,7 @@ if(entity instanceof model.MovableObject){
         view.moveEntity(entity);
     }
 
+### COMMANDS
 - Client can send 'commands' to the server, that then executes it.
 - Make 'commands' object on server, and add to interface.
 - Add any methods you want the client to be able to invoke.
