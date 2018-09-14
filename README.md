@@ -28,7 +28,6 @@ CLIENT SIDE
 - Callback for when an entity is created in the model. Used to update View with new object.
 - Do switch (netframe.getClassNameOfEntity(entity)) to check what kind of Class entity belongs to.
 
-Ex:
 ```
 switch (netframe.getClassNameOfEntity(entity)) {
 
@@ -39,19 +38,19 @@ switch (netframe.getClassNameOfEntity(entity)) {
 ```
 #### function updateEntity(entity){
 - callback for when an entity is updated in the model. Used to update existing object in view.
-
-Ex:
+```
 if(entity instanceof model.MovableObject){
         view.moveEntity(entity);
     }
+```
 
 ### COMMANDS
 - Client can send 'commands' to the server, that then executes it.
 - Make 'commands' object on server, and add to interface.
 - Add any methods you want the client to be able to invoke.
-
-Ex:
+```
 netframe.makeCmd(command, params, entityId);
+```
 - command: the function invoked on server. Ex: 'cmdMovePlayer'
 - params: array of parameters to pass to the function. Ex: [direction]
 - entityId: entity to perform command on. client has to own it. Ex: controlledEntity
