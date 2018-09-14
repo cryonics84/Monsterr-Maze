@@ -9,7 +9,6 @@ SHARED BETWEEN SERVER AND CLIENT
 ### Network Identity
 - Unique object assigned to each client.
 - This can hold game-specific information about the client, such as name, units and connection-status.
-- This also takes handles assets should he disconnect and rejoin.
 
 SERVER SIDE
 -----------------------------------------------------------
