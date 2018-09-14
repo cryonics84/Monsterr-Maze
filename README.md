@@ -19,9 +19,9 @@ HOW-TO:
 ```
 server.makeRPC(rpc, params, (OPTIONAL) clientId)
 ```
-- rpc: the function name invoked on server: Ex: 'rpcFireCannon
-- params: array of parameters to pass to the function.
-- clientId: OPTIONAL paramater - send to specific client. If left out, it will send to ALL clients.
+- **rpc:** the function name invoked on server: Ex: 'rpcFireCannon
+- **params:** array of parameters to pass to the function.
+- **clientId:** OPTIONAL paramater - send to specific client. If left out, it will send to ALL clients.
 
 #### Use case in some card game:
 Server does roundStart(). Here it assigns cards to each player and sets GAME_STATE: ROUND 1. 
@@ -58,9 +58,9 @@ CLIENT SIDE
 ```
 netframe.makeCmd(command, params, entityId);
 ```
-- command: the function invoked on server. Ex: 'cmdMovePlayer'
-- params: array of parameters to pass to the function. Ex: [direction]
-- entityId: entity to perform command on. client has to own it. Ex: controlledEntity
+- **command:** the function invoked on server. Ex: 'cmdMovePlayer'
+- **params:** array of parameters to pass to the function. Ex: [direction]
+- **entityId:** entity to perform command on. client has to own it. Ex: controlledEntity
 
 ### Client methods
 
