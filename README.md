@@ -2,9 +2,14 @@
 
 SHARED BETWEEN SERVER AND CLIENT
 -----------------------------------------------------------
-### Entities
+### Entitiy
 - Parent object that all game objects inherits from.
 - Simply extend your class from Entity, and NetFrame will offer a set of services such as, an unique identifier, client-ownership and automatic syncing.
+
+### Network Identity
+- Unique object assigned to each client.
+- This can hold game-specific information about the client, such as name, units and connection-status.
+- This also takes handles assets should he disconnect and rejoin.
 
 SERVER SIDE
 -----------------------------------------------------------
