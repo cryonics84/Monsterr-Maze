@@ -10,8 +10,8 @@ SERVER SIDE
 -----------------------------------------------------------
 
 ### RPC
-NetFrame syncronizes the gamestate by default, but sometimes you might want to trigger a certain visual que on a client, such as 'Play Door Animation' or 'Play Sound'.
 Server can execute methods on the client with Remote Procedure Calls (RPC).
+NetFrame syncronizes the gamestate by default, but sometimes you might want to trigger certain events manually.
 
 HOW-TO:
 - Make object called 'rpcs' on client-controller, and add it to the interface. 
@@ -22,6 +22,14 @@ server.makeRPC(rpc, params, (OPTIONAL) clientId)
 - rpc: the function name invoked on server: Ex: 'rpcFireCannon
 - params: array of parameters to pass to the function.
 - clientId: OPTIONAL paramater - send to specific client. If left out, it will send to ALL clients.
+
+#### Use case in some card game:
+Server does roundStart(). Here it assigns cards to each player and sets GAME_STATE: ROUND 1. 
+The client won't know that the round started, only that the Entity containing the game state changed. 
+So the to notify the client of the event, the server does: ```makeRPC('rpcStartRound', [1]);```
+The client will then call the method: ```rpcStartRound(1)``` which could make some animation displaying the cards.
+
+If want the model to trigger RPCs you can getClient() and getServer() to check if model is running server- or client-side and then invoke events instead.
 
 #### function init:
 - setup with callbacks (createEntity, updateEntity, endStage).
