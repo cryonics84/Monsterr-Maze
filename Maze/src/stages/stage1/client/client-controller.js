@@ -1,35 +1,33 @@
-import rpcController from '../shared/controller/controller'
 import model from "../shared/model/model";
 import view from './client-view'
-import {hasMixin} from "../lib/mixwith";
 import {clientSharedInterface as netframe} from '../lib/netframe'
 
-let client;
-let myPlayerID = 20;
+//---------------------------------------------------------------
+// Variables
+//---------------------------------------------------------------
+
+let controlledEntity = -1;
 const Input = {LEFT: false, RIGHT: false, UP: false, DOWN: false};
 const Direction = { LEFT: 0, UP: 1, RIGHT: 2, DOWN: 3};
 
 const rpcs = {
-    rpcCreatePlayer: rpcCreatePlayer,
-    rpcSetControlledEntity: rpcSetControlledEntity,
-    rpcCreateBox: rpcCreateBox,
-    rpcCreateTiles: rpcCreateTiles,
+
 }
 
-function init(c){
+//---------------------------------------------------------------
+// Core functions
+//---------------------------------------------------------------
+function init(client){
     netframe.shouldLog(true);
     netframe.addCreateEntityCallback(createEntity);
     netframe.addUpdateEntityCallback(updateEntity);
     netframe.addEndStageCallback(endStage);
-    netframe.init();
+    netframe.init(client);
 
-    client = c;
-    netframe.log('Setting client ' + client + ' to ' + c);
-
-    view.init(c);
+    view.init();
     setupInputListener();
 
-    ClientConnected();
+    netframe.getClient().send('ClientConnected');
 
 }
 
@@ -43,6 +41,49 @@ function endStage(){
     netframe.reset();
 }
 
+function createEntity(entity){
+    netframe.log('createEntity was called on client-controller with entity: ' + JSON.stringify(entity));
+
+    switch (netframe.getClassNameOfEntity(entity)) {
+
+        case 'Player':
+            netframe.log('Entity is PLAYER');
+
+            if(entity.owner === netframe.getClientId()) {
+                netframe.log('Setting rpcSetControlledEntity...');
+                setControlledEntity(entity.id);
+            }
+
+            view.createPlayerView(entity);
+            break;
+        case 'Tile':
+            netframe.log('Entity is TILE');
+            if(entity.type === 'w') view.createTileView(entity);
+            break;
+        case 'Box':
+            netframe.log('Entity is BOX');
+            view.createBoxView(entity);
+            break;
+        default:
+            netframe.log('Entity is UNKNOWN Class');
+            break;
+    }
+}
+
+function updateEntity(entity){
+    netframe.log('updateEntity() called on: ' + JSON.stringify(entity));
+    if(entity instanceof model.MovableObject){
+        view.moveEntity(entity);
+    }
+}
+
+function removeEntity(entity){
+    // TODO: used when disconnecting
+}
+
+//---------------------------------------------------------------
+// Input
+//---------------------------------------------------------------
 function removeInputListener(){
     fabric.util.removeListener(document.body, 'keydown', keyDown);
 }
@@ -122,97 +163,27 @@ function keyHandle(directionIndex){
     CmdMove(moveDirection);
 }
 
-function ClientConnected(){
-    netframe.log('client connected...');
-    client.send('ClientConnected');
+//---------------------------------------------------------------
+// client functions
+//---------------------------------------------------------------
+function setControlledEntity(entityId){
+    controlledEntity = entityId;
+    netframe.log('Setting myPlayerID: ' + controlledEntity);
 }
 
+//---------------------------------------------------------------
+// Commands
+//---------------------------------------------------------------
 function CmdMove(direction){
     netframe.log('sending cmdMove to server.');
-    let data = {command: 'cmdMovePlayer', entityId: myPlayerID, params: [direction]};
-    client.send('executeCmd', data);
+    let data = {command: 'cmdMovePlayer', entityId: controlledEntity, params: [direction]};
+    netframe.makeCmd(data);
 }
 
-function rpcSetControlledEntity(entityId){
-    myPlayerID = entityId;
-    netframe.log('Setting myPlayerID: ' + myPlayerID);
-}
-
-function rpcCreatePlayer(entity){
-    netframe.log('addPlayer called with ' + JSON.stringify(entity) + ' with ID: ' + entity.id);
-    let player = rpcController.RpcCreatePlayer(entity.id, entity.owner, entity.name, entity.health, entity.position);
-
-    // Set controlled unit
-    if(player.owner === netframe.getClientId()) myPlayerID = player.id;
-
-    view.createPlayerView(player);
-}
-
-function rpcCreateTiles(entityArr){
-    netframe.log('addTile called with tile array: ' + JSON.stringify(entityArr));
-
-    for(let y = 0; y < entityArr.length; y++) {
-        rpcController.GetTiles().push([]);
-
-        for (let x = 0; x < entityArr[y].length; x++) {
-            rpcController.RpcCreateTile(entityArr[y][x].id, entityArr[y][x].type, entityArr[y][x].position);
-        }
-    }
-    netframe.log('Current entities: ' + netframe.getEntitiesKeys());
-
-    // Make tile view
-    view.createTilesView(rpcController.GetTiles());
-}
-
-function rpcCreateBox(box){
-    rpcController.RpcCreateBox(box.id, box.position);
-    view.createBoxView(box);
-}
-
-function createEntity(entity){
-    netframe.log('createEntity was called on client-controller with entity: ' + JSON.stringify(entity));
-
-    switch (getType(entity)) {
-
-        case 'Player':
-            netframe.log('Entity is PLAYER');
-
-            if(entity.owner === netframe.getClientId()) {
-                netframe.log('Setting rpcSetControlledEntity...');
-                rpcSetControlledEntity(entity.id);
-            }
-
-            view.createPlayerView(entity);
-            break;
-        case 'Tile':
-            netframe.log('Entity is TILE');
-            if(entity.type === 'w') view.createTileView(entity);
-            break;
-        case 'Box':
-            netframe.log('Entity is BOX');
-            view.createBoxView(entity);
-            break;
-        default:
-            netframe.log('Entity is UNKNOWN Class');
-            break;
-    }
-}
-
-function updateEntity(entity){
-    netframe.log('updateEntity() called on: ' + JSON.stringify(entity));
-    if(entity instanceof model.MovableObject){
-        view.moveEntity(entity);
-    }
-}
-
-function getType(entity){
-    return netframe.getModelMap().get(entity.constructor);
-}
-
-const IclientController = {
+//---------------------------------------------------------------
+// Interface
+//---------------------------------------------------------------
+export default {
     init: init,
     rpcs: rpcs
 }
-
-
-export default IclientController;

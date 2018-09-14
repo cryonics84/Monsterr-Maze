@@ -5,9 +5,9 @@ import model from "../shared/model/model";
 import {Events} from 'monsterr'
 import {NetworkIdentity} from "./entity";
 
-//===============================================================
-// Server variables
-//===============================================================
+/**---------------------------------------------------------------
+| Server variables
+----------------------------------------------------------------*/
 let server;
 let entityCounter = 0;
 let timestamp = 0;
@@ -20,24 +20,25 @@ let entityRemovedCallbacks = [];
 let createEntityCallbacks = [];
 let updateEntityCallbacks = [];
 
-//===============================================================
-// Client variables
-//===============================================================
+/**---------------------------------------------------------------
+ | Client variables
+ ----------------------------------------------------------------*/
+let client;
 let clientId = -1;
 let endStageCallbacks = [];
 
-//===============================================================
-// Shared variables
-//===============================================================
+/**---------------------------------------------------------------
+ | Shared variables
+ ----------------------------------------------------------------*/
 
 let networkIdentities = [];
 let entities = new Map();
 let logging = true;
 let modelMap = new Map(); //<compiled class name, real class name>
 
-//===============================================================
-// public Server functions and events
-//===============================================================
+/**---------------------------------------------------------------
+ | public server function
+ ----------------------------------------------------------------*/
 function initServer(serverInstance){
     server = serverInstance;
 
@@ -123,9 +124,10 @@ const serverInterface = {
     removeUpdateCallback: removeUpdateCallback,
     createNewEntityId: createNewEntityId,
 }
-//===============================================================
-// private Server functions
-//===============================================================
+
+/**---------------------------------------------------------------
+ | private server functions
+ ----------------------------------------------------------------*/
 function executeCmdOnEntity(client, data){
     log('Executing command on server with data: ' + JSON.stringify(data));
 
@@ -230,13 +232,17 @@ function sendGameStateToClient(client, gameState){
     server.send('newGameState', {gameState: gameState}).toClient(client);
 }
 
+/**---------------------------------------------------------------
+ | public client functions
+ ----------------------------------------------------------------*/
 
-//===============================================================
-// public Client functions
-//===============================================================
-
-function initClient(){
+function initClient(clientRef){
+    client = clientRef;
     generateModelMap();
+}
+
+function getClient(){
+    return client;
 }
 
 function getClientId(){
@@ -302,7 +308,12 @@ function resetClient(){
     networkIdentities = [];
 }
 
+function makeCmd(data){
+    getClient().send('executeCmd', data);
+}
+
 const clientInterface = {
+    getClient: getClient,
     getClientId: getClientId,
     executeRpc: executeRpc,
     addCreateEntityCallback: addCreateEntityCallback,
@@ -313,12 +324,13 @@ const clientInterface = {
     init: initClient,
     reset: resetClient,
     addEndStageCallback: addEndStageCallback,
-    removeEndStageCallback: removeEndStageCallback
+    removeEndStageCallback: removeEndStageCallback,
+    makeCmd: makeCmd
 }
 
-//===============================================================
-// private Client functions
-//===============================================================
+/**---------------------------------------------------------------
+ | private client functions
+ ----------------------------------------------------------------*/
 function setClientId(id){
     log('Setting clientId: ' + id);
     clientId = id;
@@ -338,9 +350,9 @@ function reconstitute(obj) {
     return Object.setPrototypeOf(obj, cls.prototype);
 }
 
-//===============================================================
-// public Shared functions
-//===============================================================
+/**---------------------------------------------------------------
+ | public shared functions
+ ----------------------------------------------------------------*/
 
 function shouldLog(bool){
     logging = bool;
@@ -413,6 +425,10 @@ function removeEntitiesRemovedCallback(callback){
     entityRemovedCallbacks.splice(index, 1);
 }
 
+function getClassNameOfEntity(entity){
+    return getModelMap().get(entity.constructor);
+}
+
 const publicVars = {
     // We put it in the controller so that the model can access it
 // TODO: Model should not be dependent on the controller ! I don't know how to solve this atm.
@@ -435,12 +451,13 @@ export const sharedInterface = {
     getEntitiesOwnedBy: getEntitiesOwnedBy,
     addEntitiesRemovedCallback: addEntitiesRemovedCallback,
     removeEntitiesRemovedCallback: removeEntitiesRemovedCallback,
+    getClassNameOfEntity: getClassNameOfEntity,
     publicVars: publicVars
 };
 
-//===============================================================
-// private Shared functions
-//===============================================================
+/**---------------------------------------------------------------
+ | private shared functions
+ ----------------------------------------------------------------*/
 // Create a network identity
 function RpcCreateNetworkIdentity(identityId, clientId, name, color){
     log('RpcCreateNetworkIdentity called with identityId: ' + identityId + ', clientId: ' + clientId + 'name: ' + name + ', color: ' + color + ' Current network identities: ' + JSON.stringify(networkIdentities));
@@ -477,9 +494,10 @@ function generateModelMap(){
         log('Key: ' + key + ', Value: ' + value);
     }
 }
-//===============================================================
-// Events
-//===============================================================
+
+/**---------------------------------------------------------------
+ | Events
+ ----------------------------------------------------------------*/
 const serverEvents = {
     'executeCmd': function (server, client, data) {
         log('Received executeCmd event from client: ' + client + ', with data: ' + JSON.stringify(data));
@@ -557,9 +575,9 @@ const serverCommands = {
 
 };
 
-//===============================================================
-// Interface
-//===============================================================
+/**---------------------------------------------------------------
+ | interfaces
+ ----------------------------------------------------------------*/
 // Shared functions are a part of the interface
 
 export const serverSharedInterface = Object.assign(serverInterface, sharedInterface);

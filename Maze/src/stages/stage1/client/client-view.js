@@ -1,10 +1,7 @@
 import rpcController from '../shared/controller/controller'
-import {sharedInterface as netframe} from '../lib/netframe'
-let client;
+import {clientSharedInterface as netframe} from '../lib/netframe'
 
-function init(c){
-    client = c;
-
+function init(){
     entityViewMap = new Map();
 }
 
@@ -22,62 +19,86 @@ function createTileView(tile){
         hoverCursor: 'cursor'
     });
 
-    client.getCanvas().add(tileView);
+    netframe.getClient().getCanvas().add(tileView);
     entityViewMap.set(tile.id, tileView);
     netframe.log('Finished generated view tiles...');
 }
 
 function createPlayerView(player){
     let color = netframe.getNetworkIdentityFromClientId(player.owner).color;
+    let playerView = createView('Rect', player, 0.5, color);
+    return playerView;
+}
 
-    let playerView = new fabric.Rect({
-        width: tileSize, height: tileSize,
-        left: player.position.x * tileSize, top: player.position.y * tileSize,
+function createBoxView(box){
+    let boxView = createView('Rect', box, 1, 'grey');
+    return boxView;
+}
+
+
+function createBulletView(bullet){
+    let bulletView = createView('Rect', bullet, 0.5, 'green');
+    return bulletView;
+}
+
+function createView(shape, entity, sizeScale, color){
+
+    let entityHalfSize = (tileSize*sizeScale/2);
+    let offset = tileSize/2 - entityHalfSize;
+
+    let viewObj = {
+        sizeScale: sizeScale,
+        left: entity.position.x * tileSize + offset, top: entity.position.y * tileSize + offset,
         fill: color,
         selectable: false,
         hoverCursor: 'cursor'
-    });
-    netframe.log('Created PlayerView: ' + JSON.stringify(playerView));
-    client.getCanvas().add(playerView);
+    };
 
-    entityViewMap.set(player.id, playerView);
-
-    return playerView;
+    let view;
+    switch (shape) {
+        case 'Rect':
+            viewObj.width = sizeScale * tileSize;
+            viewObj.height = sizeScale * tileSize;
+            view = new fabric.Rect(viewObj);
+            break;
+        case 'Circle':
+            viewObj.radius = sizeScale * tileSize;
+            view = new fabric.Circle(viewObj);
+            break;
+        default:
+            netframe.log('Did not recognize shape!');
+            break;
+    }
+    netframe.log('Created View: ' + JSON.stringify(view));
+    netframe.getClient().getCanvas().add(view);
+    entityViewMap.set(entity.id, view);
+    return view;
 }
 
 function moveEntity(entity){
     netframe.log('moveEntity() called on clientView with entity: ' + JSON.stringify(entity));
     let entityView = entityViewMap.get(entity.id);
-    entityView.set({left: entity.position.x * tileSize, top: entity.position.y * tileSize});
-    client.getCanvas().renderAll();
-}
 
+    //let offset = ((tileSize / entityView.sizeScale) * ((1 / entityView.sizeScale)));
+    let entityHalfSize = (tileSize*entityView.sizeScale/2);
+    let offset = tileSize/2 - entityHalfSize;
+    let left = entity.position.x * tileSize +offset ;
+    let top = entity.position.y * tileSize +offset;
+    netframe.log('Setting entity position to: ' + JSON.stringify({x: left, y: top}));
+    entityView.set({left: left, top: top});
+    netframe.getClient().getCanvas().renderAll();
+}
+/*
 function updateEntity(entity){
+    netframe.log('updateEntity() called on clientView with entity: ' + JSON.stringify(entity));
     let entityView = entityViewMap.get(entity.id);
-    entityView.set({left: entity.position.x * tileSize, top: entity.position.y * tileSize});
+    entityView.set({left: entity.position.x * tileSize + (tileSize * entityView.sizeScale / 2), top: entity.position.y * tileSize + (tileSize * entityView.sizeScale / 2)});
 }
-
+*/
 function render(){
-    client.getCanvas().renderAll();
+    netframe.getClient().getCanvas().renderAll();
 }
 
-function createBoxView(box){
-    let color = 'grey';
-
-    let boxView = new fabric.Rect({
-        width: tileSize, height: tileSize,
-        left: box.position.x * tileSize, top: box.position.y * tileSize,
-        fill: color,
-        selectable: false,
-        hoverCursor: 'cursor'
-    });
-    netframe.log('Created boxView: ' + JSON.stringify(boxView));
-    client.getCanvas().add(boxView);
-
-    entityViewMap.set(box.id, boxView);
-
-    return boxView;
-}
 
 function reset() {
     entityViewMap = new Map();
@@ -89,7 +110,6 @@ const Iview = {
     createTileView: createTileView,
     moveEntity: moveEntity,
     createBoxView: createBoxView,
-    updateEntity: updateEntity,
     render: render,
     reset: reset
 }

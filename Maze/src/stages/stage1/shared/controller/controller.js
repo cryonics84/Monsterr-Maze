@@ -1,26 +1,22 @@
 import model from '../model/model'
 import {sharedInterface as netframe} from '../../lib/netframe'
 
-//===============================================================
+//---------------------------------------------------------------
 // Variables
-//===============================================================
+//---------------------------------------------------------------
 
 let tiles = [];
 let spawnPoints = [];
 let networkIdentityColors = ['red', 'yellow', 'white'];
 
-//===============================================================
-// Methods
-//===============================================================
+//---------------------------------------------------------------
+// create entity functions
+//---------------------------------------------------------------
 
-function RpcMoveEntity(entity, direction){
-    netframe.log('RpcMove() called with id: ' + JSON.stringify(entity) + ' and direction ' + JSON.stringify(direction));
-    entity.move(direction);
-}
-
-function RpcCreatePlayer(entityId, owner, name, health, position){
+function createPlayer(entityId, owner, name, health, position){
     netframe.log('RpcCreatePlayer called with owner: ' + owner + ', name: ' + name + ', health: ' + health + ', position: ' + position);
 
+    // Create the player entity
     let player = new model.Player(entityId, owner, name, health, position);
     netframe.log('Created player: ' + JSON.stringify(player) + ' with ID: ' + player.id);
 
@@ -33,7 +29,7 @@ function RpcCreatePlayer(entityId, owner, name, health, position){
     return player;
 }
 
-function RpcCreateBox(entityId, position){
+function createBox(entityId, position){
     netframe.log('RpcCreateBox called with entityId: ' + entityId + ', position: ' + position);
     let box = new model.Box(entityId, position);
     netframe.updateEntity(box.id, box);
@@ -42,7 +38,7 @@ function RpcCreateBox(entityId, position){
     return box;
 }
 
-function RpcCreateTile(entityId, type, position){
+function createTile(entityId, type, position){
     netframe.log('creating tile: ' + entityId + ', type: ' + type + ', position: ' + JSON.stringify(position));
     //Create tile
     let tile = new model.Tile(entityId, type, position);
@@ -58,11 +54,15 @@ function RpcCreateTile(entityId, type, position){
     tiles[position.y][position.x] = tile;
 }
 
-function GetTiles(){
+//---------------------------------------------------------------
+// getters and util functions
+//---------------------------------------------------------------
+
+function getTiles(){
     return tiles;
 }
 
-function GetSpawnPoints(){
+function getSpawnPoints(){
     return spawnPoints;
 }
 
@@ -70,13 +70,13 @@ function getNetworkIdentityColors(){
     return networkIdentityColors;
 }
 
-function GetRandomEmptyTile(){
-    let emptyTiles = GetEmptyTiles();
+function getRandomEmptyTile(){
+    let emptyTiles = getEmptyTiles();
     let randomIndex = Math.floor(Math.random() * emptyTiles.length);
     return emptyTiles[randomIndex];
 }
 
-function GetEmptyTiles(){
+function getEmptyTiles(){
     let emptyTiles = [];
 
     for(let y = 0; y < tiles.length; y++) {
@@ -92,9 +92,9 @@ function GetEmptyTiles(){
 }
 
 function getRandomSpawnPoint(){
-    netframe.log('Getting random free spawn point. Number of total spawnpoints: ' + GetSpawnPoints());
+    netframe.log('Getting random free spawn point. Number of total spawnpoints: ' + getSpawnPoints());
     //find empty spawn points
-    let emptySpawnPoints = GetSpawnPoints().filter(function(point){
+    let emptySpawnPoints = getSpawnPoints().filter(function(point){
         return !point.objectOnTileId;
     })
     //pick a random spawn point
@@ -107,20 +107,17 @@ function getRandomSpawnPoint(){
     }
 }
 
-//===============================================================
+//---------------------------------------------------------------
 // Interface
-//===============================================================
+//---------------------------------------------------------------
 
-const Icontroller = {
-    RpcMoveEntity: RpcMoveEntity,
-    RpcCreatePlayer: RpcCreatePlayer,
-    GetTiles: GetTiles,
-    GetSpawnPoints: GetSpawnPoints,
-    RpcCreateTile: RpcCreateTile,
+export default {
+    createPlayer: createPlayer,
+    getTiles: getTiles,
+    getSpawnPoints: getSpawnPoints,
+    createTile: createTile,
     getNetworkIdentityColors: getNetworkIdentityColors,
-    RpcCreateBox: RpcCreateBox,
-    GetRandomEmptyTile: GetRandomEmptyTile,
+    createBox: createBox,
+    getRandomEmptyTile: getRandomEmptyTile,
     getRandomSpawnPoint: getRandomSpawnPoint
 };
-
-export default Icontroller;

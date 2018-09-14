@@ -1,11 +1,11 @@
 import model from '../shared/model/model'
-import rpcController from '../shared/controller/controller'
+import modelController from '../shared/controller/controller'
 import {hasMixin} from "../lib/mixwith";
 import {serverSharedInterface as netframe} from '../lib/netframe';
 
-//===============================================================
+//---------------------------------------------------------------
 // Variables
-//===============================================================
+//---------------------------------------------------------------
 
 // W = wall, E = empty, P = player spawn points
 let level = [
@@ -18,9 +18,9 @@ let level = [
     ['e', 'e', 'e', 'e', 'e', 'e', 'e']
 ];
 
-//===============================================================
+//---------------------------------------------------------------
 // Commands
-//===============================================================
+//---------------------------------------------------------------
 
 // Command from client
 function cmdMovePlayer(entity, direction){
@@ -32,16 +32,16 @@ function cmdMovePlayer(entity, direction){
         return;
     }
 
-    rpcController.RpcMoveEntity(entity, direction);
+    entity.move(direction);
 }
 
 const commands = {
     'cmdMovePlayer': cmdMovePlayer,
 };
 
-//===============================================================
+//---------------------------------------------------------------
 // Core functions
-//===============================================================
+//---------------------------------------------------------------
 
 function init(serverInstance){
 
@@ -55,7 +55,6 @@ function init(serverInstance){
 
     //server generates level on startup
     generateTiles(level);
-    //netframe.clearStateChanges();
 }
 
 // Gets called from netframe after each update
@@ -64,9 +63,6 @@ function update(){}
 // Gets called from netframe when a client has joined a stage
 function clientConnected(client, networkIdentity){
     netframe.log('clientConnected() called on server-controller...');
-
-    // Tell clients to make tiles
-    //netframe.makeRPC('rpcCreateTiles', [rpcController.GetTiles()]);
 
     // Create player
     createPlayer(client, networkIdentity.name, 90, {x:1,y:2});
@@ -85,39 +81,33 @@ function entityRemoved(entity){
 
 }
 
-//===============================================================
+//---------------------------------------------------------------
 // Controller functions
-//===============================================================
+//---------------------------------------------------------------
 
-// Interval server function to create a player and tell clients to do the same
 function createPlayer(owner, name, health){
     netframe.log('createPlayer() called on server.');
-    let randomSpawnPoint = rpcController.getRandomSpawnPoint();
+    let randomSpawnPoint = modelController.getRandomSpawnPoint();
     let position = randomSpawnPoint ? {x: randomSpawnPoint.position.x, y: randomSpawnPoint.position.y} : {x:0,y:0};
     let entityId = netframe.createNewEntityId();
 
-    let player = rpcController.RpcCreatePlayer(entityId, owner, name, health, position);
-
-    //netframe.makeRPC('rpcCreatePlayer', [player]);
+    modelController.createPlayer(entityId, owner, name, health, position);
 }
 
 function generateTiles(level){
     netframe.log('Generating tiles...');
 
     for(let y = 0; y < level.length; y++) {
-        rpcController.GetTiles().push([]);
-        let levelXarr = level[y];
-        for(let x = 0; x < levelXarr.length; x++) {
-            //netframe.log("level[" + y + "][" + x + "] = " + levelXarr[x]);
-            rpcController.RpcCreateTile(netframe.createNewEntityId(), levelXarr[x], {x: x, y: y});
+        modelController.getTiles().push([]);
+        for(let x = 0; x < level[y].length; x++) {
+            modelController.createTile(netframe.createNewEntityId(), level[y][x], {x: x, y: y});
         }
     }
 }
 
-// Interval server function to create a box and tell clients to do the same
 function spawnBox(){
     netframe.log('SpawnBox() called on server.');
-    let emptyTile = rpcController.getRandomSpawnPoint();
+    let emptyTile = modelController.getRandomSpawnPoint();
     if(!emptyTile) {
         netframe.log('No empty tile found.');
         return;
@@ -125,12 +115,11 @@ function spawnBox(){
     let position = {x: emptyTile.position.x, y: emptyTile.position.y};
     let entityId = netframe.createNewEntityId();
 
-    let box = rpcController.RpcCreateBox(entityId, position);
-
-    netframe.makeRPC('rpcCreateBox', [box]);
+    modelController.createBox(entityId, position);
 }
 
-//===============================================================
+
+//---------------------------------------------------------------
 
 // Server-controller interface - should in most cases contain init(), clientConnected() and Commands{}.
 const api = {

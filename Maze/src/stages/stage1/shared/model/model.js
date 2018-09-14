@@ -15,6 +15,7 @@ import Entity from "../../lib/entity";
 import {Mixin, mix} from "../../lib/mixwith";
 import  {sharedInterface as netframe} from '../../lib/netframe'
 
+
 let MoveMixin = Mixin((superclass) => class extends superclass{
     canMoveToPosition(destinationTile, velocity){
         netframe.log('canMoveToPosition() called on object: ' + JSON.stringify(this));
@@ -54,6 +55,11 @@ let MoveMixin = Mixin((superclass) => class extends superclass{
                     return false;
                 }
             }
+            //Check if we move onto a box
+            else if(tileObject instanceof Bullet) {
+                netframe.log('We moved into a bullet - destinationTile.objectOnTileId: ' + destinationTile.objectOnTileId + ', this.id: ' + this.id);
+
+            }
         }
 
         return true;
@@ -64,7 +70,7 @@ let MoveMixin = Mixin((superclass) => class extends superclass{
 
         let endPos = {x: this.position.x + direction.x, y: this.position.y + direction.y};
 
-        let tiles = rpcController.GetTiles();
+        let tiles = rpcController.getTiles();
         let originTile = tiles[this.position.y][this.position.x];
 
         let destinationTile;
@@ -147,6 +153,13 @@ class Player extends MovableObject{
 class Box extends MovableObject{
     constructor(entityId, position){
         super(entityId, null, position);
+    }
+}
+
+class Bullet extends MovableObject{
+    constructor(entityId, position) {
+        super(entityId, null, position);
+
     }
 }
 
