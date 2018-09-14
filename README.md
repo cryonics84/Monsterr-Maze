@@ -10,15 +10,16 @@ SERVER SIDE
 -----------------------------------------------------------
 
 ### RPC
-NetFrame syncronizes the gamestate by default, but sometimes you might want to trigger a certain visual que on a client, such as 'Fire Cannon'.
+NetFrame syncronizes the gamestate by default, but sometimes you might want to trigger a certain visual que on a client, such as 'Play Door Animation' or 'Play Sound'.
 Server can execute methods on the client with Remote Procedure Calls (RPC).
+
 HOW-TO:
 - Make object called 'rpcs' on client-controller, and add it to the interface. 
 - Include any methods you want the server to be able to call.
 ```
 server.makeRPC(rpc, params, (OPTIONAL) clientId)
 ```
-- rpc: the function invoked on server: Ex: 'rpcFireCannon
+- rpc: the function name invoked on server: Ex: 'rpcFireCannon
 - params: array of parameters to pass to the function.
 - clientId: OPTIONAL paramater - send to specific client. If left out, it will send to ALL clients.
 
