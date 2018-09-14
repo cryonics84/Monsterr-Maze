@@ -36,8 +36,8 @@ server.makeRPC(rpc, params, (OPTIONAL) clientId)
 #### Use case in some card game:
 Server does roundStart(). Here it assigns cards to each player and sets GAME_STATE: ROUND 1. 
 The client won't know that the round started, only that the Entity containing the game state changed. 
-So to notify the client of the event, the server does: ```makeRPC('rpcStartRound', [1]);```
-The client will then call the method: ```rpcStartRound(1]``` which could make some animation displaying the cardse in the player hand (which was replicated from the server moments ago).
+So to notify the client of the event, the server does: ```makeRPC('rpcStartRound');```
+The client will then call the method: ```rpcStartRound()``` which could make some animation displaying the cards in the player hand (which was replicated from the server moments ago), as well as displaying the current round number (also replicated from server).
 
 
 ### Server methods
