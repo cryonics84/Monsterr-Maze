@@ -27,6 +27,7 @@ function endStage:
 function createEntity(entity):
 - Callback for when an entity is created in the model. Used to update View with new object.
 - Do switch (netframe.getClassNameOfEntity(entity)) to check what kind of Class entity belongs to.
+
 Ex:
 switch (netframe.getClassNameOfEntity(entity)) {
 
@@ -34,8 +35,10 @@ switch (netframe.getClassNameOfEntity(entity)) {
             netframe.log('Entity is PLAYER');
             view.createPlayerView(entity);
             
+
 function updateEntity(entity){
 - callback for when an entity is updated in the model. Used to update existing object in view.
+
 Ex:
 if(entity instanceof model.MovableObject){
         view.moveEntity(entity);
