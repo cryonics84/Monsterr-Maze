@@ -20,9 +20,9 @@ RPC
 #### function update
 - Callback that gets called from netframe after each update
 
-#### function clientConnected
+#### function clientConnected(client, networkIdentity)
 - Callback called when client joined stage.
-- Add to server-controller interface.
+- Passes a Network Identity unique for that client. Can be used to store information about that client, such as: Name, connection status, playerNumber.
 
 #### function entityRemoved
 - Callback called when entity was removed (ex. after disconnect).
