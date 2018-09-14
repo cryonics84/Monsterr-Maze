@@ -1,9 +1,15 @@
 # Monsterr-Maze
 
+SHARED BETWEEN SERVER AND CLIENT
+-----------------------------------------------------------
+### Entities
+- Parent object that all game objects inherits from.
+- Simply extend your class from Entity, and NetFrame will offer a set of services such as, an unique identifier, client-ownership and automatic syncing.
+
 SERVER SIDE
 -----------------------------------------------------------
 
-RPC
+### RPC
 - Server can execute methods on the client with Remote Procedure Calls (RPC).
 - Make object called 'rpcs' on client-controller, and add it to the interface. 
 - Include any methods you want the server to be able to call.
