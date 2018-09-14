@@ -7,8 +7,7 @@ RPC
 - Server can execute methods on the client with Remote Procedure Calls (RPC).
 - Make object called 'rpcs' on client-controller, and add it to the interface. 
 - Include any methods you want the server to be able to call.
-Ex:
-server.makeRPC(rpc, params, (OPTIONAL) clientId)
+- Ex: server.makeRPC(rpc, params, (OPTIONAL) clientId)
 - rpc: the function invoked on server: Ex: 'rpcFireCannon
 - params: array of parameters to pass to the function.
 - clientId: OPTIONAL paramater - send to specific client. If left out, it will send to ALL clients.
@@ -42,7 +41,10 @@ if(entity instanceof model.MovableObject){
         view.moveEntity(entity);
     }
 
-client can send 'commands' to the server, that then executes it.
+- Client can send 'commands' to the server, that then executes it.
+- Make 'commands' object on server, and add to interface.
+- Add any methods you want the client to be able to invoke.
+
 Ex:
 netframe.makeCmd(command, params, entityId);
 - command: the function invoked on server. Ex: 'cmdMovePlayer'
