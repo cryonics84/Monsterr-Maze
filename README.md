@@ -24,6 +24,7 @@ class Tile extends Entity{
 ### Network Identity
 - Unique object assigned to each client.
 - This can hold game-specific information about the client, such as name, units and connection-status.
+#### Network Identity Methods
 - get a client's Network Identity with ```netframe.getNetworkIdentityFromClientId(clientId)```
 - get all Network Identities with ```netframe.getNetworkIdentities()```
 
