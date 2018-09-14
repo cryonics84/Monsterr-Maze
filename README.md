@@ -21,7 +21,7 @@ server.makeRPC(rpc, params, (OPTIONAL) clientId)
 ```
 - **rpc:** the function name invoked on server: Ex: 'rpcFireCannon
 - **params:** array of parameters to pass to the function.
-- **clientId:** OPTIONAL paramater - send to specific client. If left out, it will send to ALL clients.
+- **clientId: *OPTIONAL** send to specific client. If left out, it will send to ALL clients.
 
 #### Use case in some card game:
 Server does roundStart(). Here it assigns cards to each player and sets GAME_STATE: ROUND 1. 
