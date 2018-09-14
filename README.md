@@ -5,11 +5,15 @@ SHARED BETWEEN SERVER AND CLIENT
 ### Entitiy
 - Parent object that all game objects inherits from.
 - Simply extend your class from Entity, and NetFrame will offer a set of services such as, an unique identifier, client-ownership and automatic syncing.
+- get specific entity with: ```netframe.getEntity(id)```
+- get all entities with: ```netframe.getEntities()```
+- get entities owned by specific client with: ```getEntitiesOwnedBy(clientId)```
+- return class-type name of specific entity with: ```getClassNameOfEntity(entity)```
 
 ### Network Identity
 - Unique object assigned to each client.
 - This can hold game-specific information about the client, such as name, units and connection-status.
-- get a clients Network Identity with ```netframe.getNetworkIdentityFromClientId(clientId)```
+- get a client's Network Identity with ```netframe.getNetworkIdentityFromClientId(clientId)```
 - get all Network Identities with ```netframe.getNetworkIdentities()```
 
 SERVER SIDE
