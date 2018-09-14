@@ -39,7 +39,8 @@ The client won't know that the round started, only that the Entity containing th
 So the to notify the client of the event, the server does: ```makeRPC('rpcStartRound', [1]);```
 The client will then call the method: ```rpcStartRound(1)``` which could make some animation displaying the cards.
 
-If want the model to trigger RPCs you can getClient() and getServer() to check if model is running server- or client-side and then invoke events instead.
+Note: 
+If you instead want the model to trigger events, use ```netframe.isServer()``` to check if model is running server, and then send appropriate RPC to clients.
 
 ### Server methods
 
