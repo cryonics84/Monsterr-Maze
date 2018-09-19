@@ -134,9 +134,9 @@ class MovableObject extends mix(Entity).with(MoveMixin){
         super(entityId, owner);
         this.position = position; //public
 
+        this.test = {position: {x:0, y:0}};
     }
 }
-
 
 class Player extends MovableObject{
 

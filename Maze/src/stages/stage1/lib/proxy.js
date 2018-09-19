@@ -1,23 +1,28 @@
-const proxy = function(object) {
+const proxy = function(originObject) {
     const handler = {
         get(target, property, receiver) {
             if (property === 'constructor') {
-                return object.constructor;
+                return originObject.constructor;
             }
+
             try {
                 return new Proxy(target[property], handler);
             } catch (err) {
                 return Reflect.get(target, property, receiver);
             }
         },
-        set(obj, prop, value) {
-            object.stateChanged();
-            return Reflect.set(...arguments);
+
+        set(targetObj, prop, value) {
+            //We do the changes before calling stateChanged, because if the property is being created,
+            // then it won't exist for us to get its path.
+            let changes = Reflect.set(...arguments);
+            originObject.stateChanged(originObject, targetObj, prop, value);
+            return changes;
         },
 
     };
 
-    return new Proxy(object, handler);
+    return new Proxy(originObject, handler);
 
 };
 

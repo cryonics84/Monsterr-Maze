@@ -75,7 +75,7 @@ function clientConnected(client, networkIdentity){
 }
 
 function entityRemoved(entity){
-    console.log('entityRemoved() called with: ' + JSON.stringify(entity));
+    netframe.log('entityRemoved() called with: ' + JSON.stringify(entity));
 
     //Check if moveable object - then we need to remove from tile.objectOnTile
 
@@ -123,7 +123,6 @@ function spawnBox(){
 
 // Server-controller interface - should in most cases contain init(), clientConnected() and Commands{}.
 const api = {
-    clientConnected: clientConnected,
     init: init,
     commands: commands
 };

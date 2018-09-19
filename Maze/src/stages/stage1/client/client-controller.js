@@ -22,12 +22,11 @@ function init(client){
     netframe.addCreateEntityCallback(createEntity);
     netframe.addUpdateEntityCallback(updateEntity);
     netframe.addEndStageCallback(endStage);
-    netframe.init(client);
 
     view.init();
     setupInputListener();
 
-    netframe.getClient().send('ClientConnected');
+    netframe.init(client);
 
 }
 
@@ -176,8 +175,7 @@ function setControlledEntity(entityId){
 //---------------------------------------------------------------
 function CmdMove(direction){
     netframe.log('sending cmdMove to server.');
-    let data = {command: 'cmdMovePlayer', entityId: controlledEntity, params: [direction]};
-    netframe.makeCmd(data);
+    netframe.makeCmd('cmdMovePlayer', [direction], controlledEntity);
 }
 
 //---------------------------------------------------------------

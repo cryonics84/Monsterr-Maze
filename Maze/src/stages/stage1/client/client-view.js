@@ -25,7 +25,10 @@ function createTileView(tile){
 }
 
 function createPlayerView(player){
-    let color = netframe.getNetworkIdentityFromClientId(player.owner).color;
+    let color = 'purple';
+    if(player.owner){
+        color = netframe.getNetworkIdentityFromClientId(player.owner).color;
+    }
     let playerView = createView('Rect', player, 0.5, color);
     return playerView;
 }
