@@ -5,9 +5,12 @@ import {sharedInterface as netframe} from '../../lib/netframe'
 // Variables
 //---------------------------------------------------------------
 
+let gameManager;
 let tiles = [];
 let spawnPoints = [];
-let networkIdentityColors = ['red', 'yellow', 'white'];
+let networkIdentityColors = ['red', 'yellow', 'white', 'pink', 'cyan', 'orange'];
+
+
 
 //---------------------------------------------------------------
 // create entity functions
@@ -25,6 +28,9 @@ function createPlayer(entityId, owner, name, health, position){
 
     //Change tile status(objectOnTileId)
     tiles[position.y][position.x].objectOnTileId = player.id;
+
+    // Add player to GameManager
+    gameManager.players.push(player);
 
     return player;
 }
@@ -52,6 +58,13 @@ function createTile(entityId, type, position){
 
     // Add to map
     tiles[position.y][position.x] = tile;
+}
+
+function createGameManager(entityId){
+    netframe.log('creating game manager: ' + entityId);
+    gameManager = new model.GameManager(entityId);
+    netframe.log('created : ' + JSON.stringify(gameManager));
+    netframe.updateEntity(gameManager.id, gameManager);
 }
 
 //---------------------------------------------------------------
@@ -107,6 +120,14 @@ function getRandomSpawnPoint(){
     }
 }
 
+function getGameManager(){
+    return gameManager;
+}
+
+function setGameManager(instance){
+    gameManager = instance;
+}
+
 //---------------------------------------------------------------
 // Interface
 //---------------------------------------------------------------
@@ -119,5 +140,8 @@ export default {
     getNetworkIdentityColors: getNetworkIdentityColors,
     createBox: createBox,
     getRandomEmptyTile: getRandomEmptyTile,
-    getRandomSpawnPoint: getRandomSpawnPoint
+    getRandomSpawnPoint: getRandomSpawnPoint,
+    createGameManager: createGameManager,
+    getGameManager: getGameManager,
+    setGameManager: setGameManager
 };

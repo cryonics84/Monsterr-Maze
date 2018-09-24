@@ -8,6 +8,7 @@ function init(){
 const tileSize = 30;
 
 let entityViewMap = new Map();
+let playersTxt;
 
 function createTileView(tile){
 
@@ -30,6 +31,9 @@ function createPlayerView(player){
         color = netframe.getNetworkIdentityFromClientId(player.owner).color;
     }
     let playerView = createView('Rect', player, 0.5, color);
+
+    playersTxt.set({text: "Number of players: " + rpcController.getGameManager().getPlayerEntities().length});
+
     return playerView;
 }
 
@@ -38,6 +42,17 @@ function createBoxView(box){
     return boxView;
 }
 
+function createGameManagerView(gameManager){
+    playersTxt = new fabric.Text("Number of players: " + gameManager.getPlayerEntities().length, {
+        fontFamily: 'Comic Sans'
+    });
+    addToCanvas(playersTxt);
+}
+
+function updateGameManagerView(gameManager){
+    netframe.log('updateGameManagerView() called with: ' + JSON.stringify(gameManager));
+    playersTxt.set({text: "Number of players: " + gameManager.getPlayerEntities().length});
+}
 
 function createBulletView(bullet){
     let bulletView = createView('Rect', bullet, 0.5, 'green');
@@ -73,9 +88,13 @@ function createView(shape, entity, sizeScale, color){
             break;
     }
     netframe.log('Created View: ' + JSON.stringify(view));
-    netframe.getClient().getCanvas().add(view);
+    addToCanvas(view);
     entityViewMap.set(entity.id, view);
     return view;
+}
+
+function addToCanvas(view){
+    netframe.getClient().getCanvas().add(view);
 }
 
 function moveEntity(entity){
@@ -107,6 +126,12 @@ function reset() {
     entityViewMap = new Map();
 }
 
+function removeEntityView(entity){
+    let entityView = entityViewMap.get(entity.id);
+    netframe.getClient().getCanvas().remove(entityView);
+    entityViewMap.delete(entity.id);
+}
+
 const Iview = {
     init: init,
     createPlayerView: createPlayerView,
@@ -114,7 +139,10 @@ const Iview = {
     moveEntity: moveEntity,
     createBoxView: createBoxView,
     render: render,
-    reset: reset
-}
+    reset: reset,
+    removeEntityView: removeEntityView,
+    createGameManagerView: createGameManagerView,
+    updateGameManagerView: updateGameManagerView
+};
 
 export default Iview;

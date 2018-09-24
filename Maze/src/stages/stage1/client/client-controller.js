@@ -1,6 +1,7 @@
 import model from "../shared/model/model";
 import view from './client-view'
 import {clientSharedInterface as netframe} from '../lib/netframe'
+import modelController from '../shared/controller/controller'
 
 //---------------------------------------------------------------
 // Variables
@@ -22,7 +23,7 @@ function init(client){
     netframe.addCreateEntityCallback(createEntity);
     netframe.addUpdateEntityCallback(updateEntity);
     netframe.addEndStageCallback(endStage);
-
+    netframe.addEntitiesRemovedCallback(removeEntity);
     view.init();
     setupInputListener();
 
@@ -63,6 +64,11 @@ function createEntity(entity){
             netframe.log('Entity is BOX');
             view.createBoxView(entity);
             break;
+        case 'GameManager':
+            netframe.log('Entity is GameManager');
+            modelController.setGameManager(entity);
+            view.createGameManagerView(entity);
+            break;
         default:
             netframe.log('Entity is UNKNOWN Class');
             break;
@@ -74,10 +80,18 @@ function updateEntity(entity){
     if(entity instanceof model.MovableObject){
         view.moveEntity(entity);
     }
+    else if(entity instanceof model.GameManager){
+        view.updateGameManagerView(entity);
+    }
 }
 
 function removeEntity(entity){
-    // TODO: used when disconnecting
+    view.removeEntityView(entity);
+
+    netframe.log('Removed entity with class type: ' + netframe.getClassNameOfEntity(entity));
+    if(entity instanceof model.Player){
+        view.updateGameManagerView(modelController.getGameManager());
+    }
 }
 
 //---------------------------------------------------------------

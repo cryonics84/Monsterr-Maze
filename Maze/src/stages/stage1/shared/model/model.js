@@ -174,6 +174,20 @@ class Tile extends Entity{
     }
 }
 
+const GameState = { WAITING: 0, PLAYING: 1, GAME_OVER: 2};
+
+class GameManager extends Entity{
+    constructor(entityId){
+        super(entityId, null);
+        this.gameState = GameState.WAITING;
+        this.players = [];
+    }
+
+    getPlayerEntities(){
+        return Array.from( netframe.getEntities().values() ).filter(entity => entity instanceof Player);
+
+    }
+}
 
 
 const IModel = {
@@ -181,7 +195,9 @@ const IModel = {
     Box: Box,
     Tile: Tile,
     MoveMixin: MoveMixin,
-    MovableObject: MovableObject
+    MovableObject: MovableObject,
+    GameManager: GameManager,
+    GameState: GameState
 }
 
 export default IModel;

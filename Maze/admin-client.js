@@ -11,8 +11,8 @@ let options = {
   html
 }
 
-let events = {}
-let commands = {}
+let events = {};
+let commands = {};
 
 const admin = createClient({
   events,

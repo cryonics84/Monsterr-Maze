@@ -9,13 +9,19 @@ import {serverSharedInterface as netframe} from '../lib/netframe';
 
 // W = wall, E = empty, P = player spawn points
 let level = [
-    ['w', 'w', 'w', 'e', 'e', 'e', 'e'],
-    ['e', 'p', 'e', 'p', 'e', 'e', 'e'],
-    ['e', 'w', 'p', 'e', 'e', 'e', 'e'],
-    ['e', 'e', 'e', 'w', 'e', 'e', 'e'],
-    ['e', 'w', 'w', 'e', 'e', 'e', 'e'],
-    ['e', 'e', 'e', 'e', 'p', 'e', 'e'],
-    ['e', 'e', 'e', 'e', 'e', 'e', 'e']
+    ['w', 'w', 'w', 'e', 'e', 'e', 'e', 'e', 'w'],
+    ['w', 'e', 'p', 'e', 'p', 'e', 'e', 'e', 'w'],
+    ['w', 'e', 'w', 'p', 'e', 'e', 'e', 'e', 'w'],
+    ['w', 'e', 'e', 'e', 'w', 'e', 'e', 'e', 'w'],
+    ['w', 'e', 'w', 'w', 'e', 'e', 'e', 'e', 'w'],
+    ['w', 'e', 'e', 'e', 'e', 'p', 'e', 'e', 'w'],
+    ['w', 'e', 'e', 'e', 'e', 'e', 'e', 'e', 'w'],
+    ['w', 'e', 'e', 'e', 'e', 'e', 'e', 'e', 'w'],
+    ['w', 'e', 'e', 'e', 'e', 'e', 'e', 'e', 'w'],
+    ['w', 'e', 'e', 'e', 'e', 'e', 'e', 'e', 'w'],
+    ['w', 'e', 'e', 'e', 'e', 'e', 'e', 'e', 'w'],
+    ['w', 'e', 'e', 'e', 'e', 'e', 'e', 'e', 'w'],
+    ['w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w'],
 ];
 
 //---------------------------------------------------------------
@@ -25,6 +31,13 @@ let level = [
 // Command from client
 function cmdMovePlayer(entity, direction){
     netframe.log('called movePlayer() on server');
+
+    netframe.log('GameState: ' + modelController.getGameManager().gameState );
+
+    if(modelController.getGameManager().gameState === model.GameState.WAITING){
+        netframe.log('Ignoring command. Still in waiting state....');
+        return;
+    }
 
     // Check that entity is capable of moving
     if(!(hasMixin(entity, model.MoveMixin))){
@@ -53,6 +66,9 @@ function init(serverInstance){
     netframe.init(serverInstance); // set server reference
     netframe.startLoop(10); // start server update with X ms interval - stop again with stopLoop()
 
+    //make gamemanager
+    createGameManager();
+
     //server generates level on startup
     generateTiles(level);
 }
@@ -67,8 +83,9 @@ function clientConnected(client, networkIdentity){
     // Create player
     createPlayer(client, networkIdentity.name, 90, {x:1,y:2});
 
-    // Spawn a box when at least 2 players have joined TODO
-    if(netframe.getNetworkIdentities().length >= 2){
+    // Spawn a box when at least 2 players have joined and start the game
+    if(netframe.getNetworkIdentities().length >= 2 && modelController.getGameManager().gameState === model.GameState.WAITING){
+        modelController.getGameManager().gameState = model.GameState.PLAYING;
         spawnBox();
     }
 
@@ -92,6 +109,10 @@ function createPlayer(owner, name, health){
     let entityId = netframe.createNewEntityId();
 
     modelController.createPlayer(entityId, owner, name, health, position);
+}
+
+function createGameManager(){
+    modelController.createGameManager(netframe.createNewEntityId());
 }
 
 function generateTiles(level){

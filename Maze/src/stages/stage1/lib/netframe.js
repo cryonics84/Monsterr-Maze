@@ -4,12 +4,14 @@ import clientController from '../client/client-controller'
 import model from "../shared/model/model";
 import {Events} from 'monsterr'
 import {NetworkIdentity} from "./entity";
+import Entity from "./entity";
 
 /**---------------------------------------------------------------
 | Server variables
 ----------------------------------------------------------------*/
 let server;
 let entityCounter = 0;
+let networkIdentityIdCounter = 0;
 let timestamp = 0;
 let intervalId = -1;
 let rpcBuffer = [];
@@ -87,7 +89,6 @@ function resolveRPCbuffer(){
             server.send('executeRPC', rpc.data).toAll();
         }
     });
-    rpcBuffer.length = 0;
 }
 
 function clearStateChanges(){
@@ -121,9 +122,6 @@ function removeClientConnectedCallback(callback){
     let index = clientConnectCallbacks.indexOf(callback);
     clientConnectCallbacks.splice(index, 1);
 }
-
-
-
 
 const serverInterface = {
     init: initServer,
@@ -169,30 +167,27 @@ function clientConnected(client){
 
     server.send('setClientId', {clientId: client}).toClient(client);
 
+    //Give him existing IDs
+    networkIdentities.forEach(networkIdentity => server.send('createNetworkIdentity', {networkIdentity: networkIdentity}).toClient(client));
+
     //Check if client was already connected, else create network ID
     let networkIdentity = networkIdentities.find(networkIdentity => networkIdentity.clientId === client);
-    if(networkIdentity){
-        //Client exists so we feed him game state
-        log('Existing client.');
-        //send him networkIdentities
-        networkIdentities.forEach(networkIdentity => server.send('createNetworkIdentity', {networkIdentity: networkIdentity}).toClient(client));
-
-        sendGameStateToClient(client, getSerializedGameState());
-    }else{
+    if(!networkIdentity){
         // Client needs new network identity
         log('New client');
-        createNetworkIdentity(client)
+        createNetworkIdentity(client, networkIdentityIdCounter++);
     }
+    sendGameStateToClient(client, getSerializedGameState());
 }
 
-function createNetworkIdentity(client){
+function createNetworkIdentity(client, id){
     let randomName = Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 5);
 
     log('Creating network identity...');
-    // Create entity
-    let identityId = getNetworkIdentities().length;
+
+
     //let networkIdentity = rpcController.RpcCreateNetworkIdentity(identityId, client, randomName, rpcController.getNetworkIdentityColors()[identityId]);
-    let networkIdentity = RpcCreateNetworkIdentity(identityId, client, randomName, rpcController.getNetworkIdentityColors()[identityId]);
+    let networkIdentity = RpcCreateNetworkIdentity(id, client, randomName, rpcController.getNetworkIdentityColors()[id]);
 
     server.send('createNetworkIdentity', {networkIdentity: networkIdentity}).toAll();
 
@@ -202,29 +197,32 @@ function createNetworkIdentity(client){
 function update(){
     timestamp++;
 
-    //resolve all changes by updating clients
-    if(Object.keys(publicVars.stateChanges).length > 0){
-        log('New state changes found: ' + JSON.stringify(publicVars.stateChanges));
+    // Any clients listening?
+    if(networkIdentities.length > 0 ){
+        //resolve all changes by updating clients
+        if(Object.keys(publicVars.stateChanges).length > 0){
+            let serializedChanges = JSON.stringify(publicVars.stateChanges, objReferenceReplacer);
+            log('New state changes found: ' + serializedChanges);
 
-        //let serializedStateChanges = publicVars.stateChanges.map(x => getSerializedEntity(x));
-        //let serializedStateChanges = JSON.stringify(publicVars.stateChanges);
-        //log('StateChanges JSON: ' + serializedStateChanges);
-        let data = {gameState: publicVars.stateChanges};
-        publicVars.stateHistory.push(data);
-        log('data package size:' + memorySizeOf(data));
-        server.send('newStateUpdate', data).toAll();
+            //let serializedStateChanges = publicVars.stateChanges.map(x => getSerializedEntity(x));
+            //let serializedStateChanges = JSON.stringify(publicVars.stateChanges);
+            //log('StateChanges JSON: ' + serializedStateChanges);
+            let data = {gameState: JSON.parse(serializedChanges)};
+            publicVars.stateHistory.push(data);
+            log('data package size:' + memorySizeOf(data));
+            server.send('newStateUpdate', data).toAll();
+        }
 
-        //clearStateChanges();
-    }
-
-    if(rpcBuffer.length > 0){
-        resolveRPCbuffer();
+        if(rpcBuffer.length > 0){
+            resolveRPCbuffer();
+        }
     }
 
     //invoke server updateloop
     updateCallbacks.forEach(callback => {callback()});
 
     publicVars.stateChanges = {};
+    rpcBuffer.length = 0;
 }
 
 function getSerializedGameState(){
@@ -238,19 +236,43 @@ function getSerializedGameState(){
     return gameState;
 }
 
+function objReferenceReplacer(key,value) {
+    //log('Replacer with KEY: ' + JSON.stringify(key) + ', VALUE: ' + JSON.stringify(value));
+    if (key && (value instanceof Entity) && value.hasOwnProperty("id")) {
+        log('Found object reference: ' + JSON.stringify(value));
+        // add '#' to indicate that this is a object reference
+        return '#' + value.id;
+    }else{
+        return value;
+    }
+}
+
 function getSerializedEntity(entity){
     log('Serializing entity: ' + JSON.stringify(entity));
-    let entityJSON = JSON.parse(JSON.stringify(entity));
+
+    //first we need to substitute all entity references with ID references
+    let serialized = JSON.stringify(entity, objReferenceReplacer);
+
+    log('Serialized entity: ' + serialized);
+
+    log('Parsing...');
+    let entityJSON = JSON.parse(serialized);
+
     log(entity.constructor);
     let className =  modelMap.get(entity.constructor);
     log('className: ' + JSON.stringify(className));
     entityJSON["_class"] = className;
+
     log('Finished serializing entity: ' + JSON.stringify(entityJSON));
     return entityJSON;
 }
 
+
+
 function sendGameStateToClient(client, gameState){
     log('sendGameStateToClient() called with client: ' + client + ' and gameState:\n' + JSON.stringify(gameState));
+    //send him networkIdentities
+
     server.send('newGameState', {gameState: gameState}).toClient(client);
 }
 
@@ -323,8 +345,40 @@ function updateGameState(stateChanges){
         for (let stateChange in prop) {
             if(stateChange === '_class') continue;
 
+            let value = prop[stateChange];
+
+            // if the prop we are changing is an ID (indicated by # prefix) then use the value to reassign the entity reference
+            log('Looking for object references in prop: ' + JSON.stringify(prop) + ', Value: ' + JSON.stringify(value));
+            if((typeof value == 'String') && (value.charAt(0) === '#')){
+                log('Found object reference with ID: ' + value.charAt(0));
+                stateChange = stateChange.substring(1);
+                let entity = getEntity(value);
+                if(entity){
+                    log('Found entity referenced: ' + JSON.stringify(entity));
+                    value = entity;
+                }else{
+                    log('Error! Failed to find entity that this property references.');
+                }
+            }
+            /*
+            //Check for array indexes
+            else if((typeof value == 'String') && (value.indexOf('.[')) > -1){
+                let arrIndex = value.indexOf('.$');
+                log('Found array index with index: ' + arrIndex);
+                stateChange = stateChange.substring(1);
+                let entity = getEntity(value);
+                if(entity){
+                    log('Found entity referenced: ' + JSON.stringify(entity));
+                    value = entity;
+                }else{
+                    log('Error! Failed to find entity that this property references.');
+                }
+            }
+*/
+
             log('finding prop of propString: ' + stateChange + ', and settings its value to : ' + prop[stateChange]) ;
-            setPath(entity, stateChange, prop[stateChange]);
+            setPath(entity, stateChange, value);
+            log('New value of prop: ' + stateChange + ' = ' + JSON.stringify(entity[stateChange]));
         }
         log('New values of entity:\n ' + JSON.stringify(entity));
         updateEntity(id, entity);
@@ -342,10 +396,23 @@ function reconstructGameState(gameState){
 
 }
 
+function splitPath(path){
+    return path
+        .split(/[\.\[\]\'\"]/)
+        .filter(p => p);
+}
+
+const setPath = (object, path, value) =>
+    splitPath(path)
+    .reduce((keyAccumulator, property) => {
+        log('keyAccumulator: ' + JSON.stringify(keyAccumulator));
+            keyAccumulator[property] = splitPath(path).pop() === property ? value : keyAccumulator[property] || {}
+    }, object);
+/*
 const setPath = (object, path, value) => path
     .split('.')
-    .reduce((o,p) => o[p] = path.split('.').pop() === p ? value : o[p] || {}, object)
-
+    .reduce((key,property) => key[property] = path.split('.').pop() === property ? value : key[property] || {}, object);
+*/
 
 function getModelMap(){
     return modelMap;
@@ -401,9 +468,9 @@ function setClientId(id){
  * resulting class.
  */
 function reconstitute(obj) {
-    log('reconstituting called on: ' + JSON.stringify(obj));
+    //log('reconstituting called on: ' + JSON.stringify(obj));
     let cls = model[obj['_class']];
-    log('found class: ' + cls);
+    //log('found class: ' + cls);
 
     delete obj['_class'];  // remove meta-property
     return Object.setPrototypeOf(obj, cls.prototype);
@@ -555,15 +622,22 @@ function RpcRemoveEntities(entitiesId){
     for(let index in entitiesId){
         let entity = entities.get(entitiesId[index]);
 
-        // Tell server and client listeners that an entity is removed
-        entityRemovedCallbacks.forEach(callback => {callback(entity)});
-
         //Remove entity from Map
         entities.delete(entitiesId[index]);
+
+        // Tell server and client listeners that an entity is removed
+        entityRemovedCallbacks.forEach(callback => {callback(entity)});
     }
 
 
 }
+
+function RpcRemoveNetworkIdentity(clientId){
+    let networkIdentityIndex = networkIdentities.findIndex(obj => obj.clientId === clientId);
+    log('Removing network identity: ' + JSON.stringify(networkIdentities[networkIdentityIndex]));
+    networkIdentities.splice(networkIdentityIndex, 1);
+}
+
 function generateModelMap(){
     log('Generating modelMap...');
     for(let key in model) {
@@ -629,8 +703,17 @@ const serverEvents = {
         log('Received clientConnected event from client with ID: ' + client);
         clientConnected(client);
     },
+    [Events.CLIENT_CONNECTED]: (monsterr, clientId) => {
+        log(clientId, 'connected! Hello there :-)');
+
+        // Set client state to server stage - this will invoke ClientConnected event on Client
+        setTimeout(function(){
+            server.send(Events.START_STAGE, server.getCurrentStage().number).toClient(clientId)
+        }, 1000);
+
+    },
     [Events.CLIENT_RECONNECTED]: (monsterr, clientId) => {
-        log(clientId, 'reconnected! Hello there :-)');
+        log(clientId, 'reconnected! Welcome back :-)');
 
         // Set client state to server stage - this will invoke ClientConnected event on Client
         setTimeout(function(){
@@ -652,9 +735,9 @@ const serverEvents = {
         server.send('removeEntities', {entitiesId: entitiesId}).toAll();
 
         //remove network identity
-        let networkIdentityIndex = networkIdentities.findIndex(obj => obj.clientId === clientId);
-        log('Removing network identity: ' + JSON.stringify(networkIdentities[networkIdentityIndex]));
-        networkIdentities.splice(networkIdentityIndex, 1);
+        RpcRemoveNetworkIdentity(clientId);
+        server.send('removeNetworkIdentity', {clientId: clientId}).toAll();
+
     }
 };
 
@@ -676,6 +759,10 @@ const clientEvents = {
         updateGameState(data.gameState);
         //applyStateChanges(data.stateChanges);
 
+    },
+    'removeNetworkIdentity': function (client, data) {
+        log('Received removeEntities event from server with data: ' + JSON.stringify(data));
+        RpcRemoveNetworkIdentity(data.clientId);
     },
     'removeEntities': function (client, data) {
         log('Received removeEntities event from server with data: ' + JSON.stringify(data));

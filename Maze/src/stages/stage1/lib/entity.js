@@ -40,17 +40,20 @@ const Entity = (function() {
         stateChanged(originObject, targetObj, prop, value){
             if(!this.syncing) return;
 
-            //netframe.log('Property changed: ' + prop + ', of targetObj: ' + JSON.stringify(targetObj) + ', with value ==> ' + targetObj[prop]);
+            netframe.log('Entity: ' + originObject.id + ', Property changed: ' + prop + ', of targetObj: ' + JSON.stringify(targetObj) + '\n, with value ==> ' + JSON.stringify(targetObj[prop]));
 
             let propPath = findPropPaths(originObject, (key, path, obj) => key === prop && targetObj[prop] === value && targetObj === obj );
-            //netframe.log('Finding path to property: ' + propPath);
+            netframe.log('Finding path to property: ' + propPath);
 
-            netframe.addStateChange(originObject, propPath, value);
-
+            // only add change if we found a valid property path
+            if(propPath){
+                netframe.addStateChange(originObject, propPath, value);
+            }
         }
     }
     return Entity;
 })();
+
 
 export class NetworkIdentity {
 
@@ -83,13 +86,22 @@ function findPropPaths(obj, predicate, targetObj) {  // The function
     }
     (function find(obj) {
         for (const key of Object.keys(obj)) {  // use only enumrable own properties.
+
+
             if (predicate(key, path, obj) === true) {     // Found a path
-                path.push(key);                // push the key
-                results.push(path.join("."));  // Add the found path to results
+                if(Array.isArray(obj)){
+                    // add array identifiers [ and ]
+                    //path.push('['+key+']');
+                    results.push(path.join(""));  // Add the found path to results
+                }else{
+                    path.push(key);                // push the key
+                    results.push(path.join("."));  // Add the found path to results
+                }
+
                 path.pop();                    // remove the key.
             }
             const o = obj[key];                 // The next object to be searched
-            if (o && typeof o === "object" && ! Array.isArray(o)) {   // check for null then type object
+            if (o && typeof o === "object" ) {   // check for null then type object
                 if (! discoveredObjects.find(obj => obj === o)) {  // check for cyclic link
                     path.push(key);
                     discoveredObjects.push(o);
@@ -101,3 +113,5 @@ function findPropPaths(obj, predicate, targetObj) {  // The function
     } (obj));
     return results;
 }
+
+
