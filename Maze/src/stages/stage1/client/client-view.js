@@ -1,28 +1,27 @@
-import rpcController from '../shared/controller/controller'
+import modelController from '../shared/controller/controller'
 import {clientSharedInterface as netframe} from '../lib/netframe'
+import model from "../shared/model/model";
 
-function init(){
-    entityViewMap = new Map();
-}
-
+let canvas;
 const tileSize = 30;
-
 let entityViewMap = new Map();
 let playersTxt;
 
+function init(){
+    entityViewMap = new Map();
+
+    model.setCallbackMap(Iview);
+
+    canvas = netframe.getClient().getCanvas();
+}
+
+
 function createTileView(tile){
-
-    let tileView = new fabric.Rect({
-        width: tileSize, height: tileSize,
-        left: tile.position.x * tileSize, top: tile.position.y *tileSize,
-        fill: 'black',
-        selectable: false,
-        hoverCursor: 'cursor'
-    });
-
-    netframe.getClient().getCanvas().add(tileView);
-    entityViewMap.set(tile.id, tileView);
-    netframe.log('Finished generated view tiles...');
+    if(tile.type !== 'w'){
+        return
+    }
+    createView('Rect', tile, 1, 'black');
+    netframe.log('Finished creating tile view object...');
 }
 
 function createPlayerView(player){
@@ -32,7 +31,7 @@ function createPlayerView(player){
     }
     let playerView = createView('Rect', player, 0.5, color);
 
-    playersTxt.set({text: "Number of players: " + rpcController.getGameManager().getPlayerEntities().length});
+    //playersTxt.set({text: "Number of players: " + rpcController.getGameManager().getPlayerEntities().length});
 
     return playerView;
 }
@@ -43,21 +42,30 @@ function createBoxView(box){
 }
 
 function createGameManagerView(gameManager){
-    playersTxt = new fabric.Text("Number of players: " + gameManager.getPlayerEntities().length, {
-        fontFamily: 'Comic Sans'
-    });
+    let content = "Number of players: " + gameManager.players.length;
+    let position = {x: 10, y: 10};
+    let color = 'red';
+    playersTxt = new createText(content, position, color);
     addToCanvas(playersTxt);
 }
 
-function updateGameManagerView(gameManager){
-    netframe.log('updateGameManagerView() called with: ' + JSON.stringify(gameManager));
-    playersTxt.set({text: "Number of players: " + gameManager.getPlayerEntities().length});
+function updateGameManagerView(){
+    netframe.log('updateGameManagerView() called with: ' + JSON.stringify(modelController.getGameManager()));
+    playersTxt.set({text: "Number of players: " + modelController.getGameManager().players.length});
 }
 
-function createBulletView(bullet){
-    let bulletView = createView('Rect', bullet, 0.5, 'green');
-    return bulletView;
+function createText(content, position, color){
+    playersTxt = new fabric.Text(content, {
+        fontFamily: 'Comic Sans',
+        left: position.x, top: position.y,
+        fill: color,
+        selectable: false,
+        hoverCursor: 'cursor'
+    });
+
+    return playersTxt;
 }
+
 
 function createView(shape, entity, sizeScale, color){
 
@@ -87,6 +95,8 @@ function createView(shape, entity, sizeScale, color){
             netframe.log('Did not recognize shape!');
             break;
     }
+
+
     netframe.log('Created View: ' + JSON.stringify(view));
     addToCanvas(view);
     entityViewMap.set(entity.id, view);
@@ -94,7 +104,15 @@ function createView(shape, entity, sizeScale, color){
 }
 
 function addToCanvas(view){
-    netframe.getClient().getCanvas().add(view);
+    canvas.add(view);
+    if(view.get('type') !== "text"){
+        netframe.log('Bringing entity to back...');
+        canvas.sendToBack(view);
+    }else{
+        netframe.log('Bringing text to front...');
+        canvas.bringToFront(view);
+    }
+    canvas.renderAll();
 }
 
 function moveEntity(entity){
@@ -121,7 +139,6 @@ function render(){
     netframe.getClient().getCanvas().renderAll();
 }
 
-
 function reset() {
     entityViewMap = new Map();
 }
@@ -130,6 +147,11 @@ function removeEntityView(entity){
     let entityView = entityViewMap.get(entity.id);
     netframe.getClient().getCanvas().remove(entityView);
     entityViewMap.delete(entity.id);
+
+    //update gameManagerView if needed
+    if(entity instanceof model.Player){
+        updateGameManagerView();
+    }
 }
 
 const Iview = {

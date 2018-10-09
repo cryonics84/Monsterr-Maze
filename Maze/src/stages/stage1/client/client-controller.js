@@ -12,22 +12,25 @@ const Input = {LEFT: false, RIGHT: false, UP: false, DOWN: false};
 const Direction = { LEFT: 0, UP: 1, RIGHT: 2, DOWN: 3};
 
 const rpcs = {
-
-}
+    createPlayer: createPlayer,
+    createBox: createBox,
+};
 
 //---------------------------------------------------------------
 // Core functions
 //---------------------------------------------------------------
 function init(client){
-    netframe.shouldLog(true);
-    netframe.addCreateEntityCallback(createEntity);
-    netframe.addUpdateEntityCallback(updateEntity);
-    netframe.addEndStageCallback(endStage);
-    netframe.addEntitiesRemovedCallback(removeEntity);
-    view.init();
-    setupInputListener();
+    //we need to add the remove entity callback to the model controller before the view
 
     netframe.init(client);
+    modelController.init();
+
+    netframe.shouldLog(true);
+    netframe.addCreateEntityCallback(createEntity);
+    netframe.addRemoveEntityCallback(removeEntity);
+    netframe.addEndStageCallback(endStage);
+    view.init();
+    setupInputListener();
 
 }
 
@@ -36,43 +39,43 @@ function endStage(){
     removeInputListener();
     view.reset();
     netframe.removeCreateEntityCallback(createEntity);
-    netframe.removeUpdateEntityCallback(updateEntity);
+    netframe.removeRemoveEntityCallback(removeEntity);
     netframe.removeEndStageCallback(endStage);
     netframe.reset();
 }
 
 function createEntity(entity){
     netframe.log('createEntity was called on client-controller with entity: ' + JSON.stringify(entity));
-
+/*
+    netframe.log('Printing properties of created object...');
+    for(let prop in entity){
+        netframe.log('Prop: ' + prop);
+    }
+*/
     switch (netframe.getClassNameOfEntity(entity)) {
 
         case 'Player':
             netframe.log('Entity is PLAYER');
-
             if(entity.owner === netframe.getClientId()) {
                 netframe.log('Setting rpcSetControlledEntity...');
                 setControlledEntity(entity.id);
             }
-
-            view.createPlayerView(entity);
-            break;
-        case 'Tile':
-            netframe.log('Entity is TILE');
-            if(entity.type === 'w') view.createTileView(entity);
-            break;
-        case 'Box':
-            netframe.log('Entity is BOX');
-            view.createBoxView(entity);
             break;
         case 'GameManager':
             netframe.log('Entity is GameManager');
             modelController.setGameManager(entity);
             view.createGameManagerView(entity);
+            netframe.log('LOGGING TILES IN MANAGER: ' + modelController.getTiles());
+            break;
+        case 'Tile':
+            netframe.log('Entity is Tile');
             break;
         default:
             netframe.log('Entity is UNKNOWN Class');
             break;
     }
+
+    entity.spawnView();
 }
 
 function updateEntity(entity){
@@ -86,12 +89,8 @@ function updateEntity(entity){
 }
 
 function removeEntity(entity){
-    view.removeEntityView(entity);
-
-    netframe.log('Removed entity with class type: ' + netframe.getClassNameOfEntity(entity));
-    if(entity instanceof model.Player){
-        view.updateGameManagerView(modelController.getGameManager());
-    }
+    netframe.log('removeEntity() called on client-controller with entity id: ' + entity.id);
+    entity.removeView();
 }
 
 //---------------------------------------------------------------
@@ -191,6 +190,20 @@ function CmdMove(direction){
     netframe.log('sending cmdMove to server.');
     netframe.makeCmd('cmdMovePlayer', [direction], controlledEntity);
 }
+
+//---------------------------------------------------------------
+// RPC
+//---------------------------------------------------------------
+function createPlayer(entityId, owner,name, health, position){
+    netframe.log('createPlayer() called');
+
+    view.updateGameManagerView(modelController.getGameManager());
+}
+
+function createBox(entityId, position){
+    netframe.log('createBox() called');
+}
+
 
 //---------------------------------------------------------------
 // Interface

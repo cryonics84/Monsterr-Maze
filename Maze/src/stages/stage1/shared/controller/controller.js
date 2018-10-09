@@ -1,16 +1,14 @@
 import model from '../model/model'
 import {sharedInterface as netframe} from '../../lib/netframe'
+import view from "../../client/client-view";
 
 //---------------------------------------------------------------
 // Variables
 //---------------------------------------------------------------
 
 let gameManager;
-let tiles = [];
 let spawnPoints = [];
 let networkIdentityColors = ['red', 'yellow', 'white', 'pink', 'cyan', 'orange'];
-
-
 
 //---------------------------------------------------------------
 // create entity functions
@@ -27,19 +25,27 @@ function createPlayer(entityId, owner, name, health, position){
     netframe.updateEntity(player.id, player);
 
     //Change tile status(objectOnTileId)
-    tiles[position.y][position.x].objectOnTileId = player.id;
+    setObjectOnTile(position.x, position.y, player);
 
     // Add player to GameManager
-    gameManager.players.push(player);
+    gameManager.players.push(player.id);
 
     return player;
+}
+
+function setObjectOnTile(x, y, entity){
+    netframe.log('setOnObjectOnTile called()');
+    let tileId = gameManager.tiles[y][x];
+    let tile = netframe.getEntity(tileId);
+    tile.objectOnTileId = entity.id;
+    netframe.log('Updated tile: ' + JSON.stringify(netframe.getEntity(tileId)));
 }
 
 function createBox(entityId, position){
     netframe.log('RpcCreateBox called with entityId: ' + entityId + ', position: ' + position);
     let box = new model.Box(entityId, position);
     netframe.updateEntity(box.id, box);
-    tiles[position.y][position.x].objectOnTileId = box.id;
+    setObjectOnTile(position.x, position.y, box);
 
     return box;
 }
@@ -57,7 +63,25 @@ function createTile(entityId, type, position){
     netframe.updateEntity(tile.id, tile);
 
     // Add to map
-    tiles[position.y][position.x] = tile;
+    gameManager.tiles[position.y][position.x] = tile.id;
+
+    tile.spawnView();
+}
+
+function createTiles(level){
+    netframe.log('createTiles() called');
+    for(let y = 0; y < level.length; y++) {
+        gameManager.tiles.push([]);
+        for(let x = 0; x < level[y].length; x++) {
+            createTile(netframe.createNewEntityId(), level[y][x], {x: x, y: y});
+        }
+    }
+}
+
+function moveEntity(entityId, direction){
+    netframe.log('moveEntity called() on model Controller');
+    let entity = netframe.getEntity(entityId);
+    entity.move(direction);
 }
 
 function createGameManager(entityId){
@@ -67,12 +91,18 @@ function createGameManager(entityId){
     netframe.updateEntity(gameManager.id, gameManager);
 }
 
+
 //---------------------------------------------------------------
 // getters and util functions
 //---------------------------------------------------------------
 
 function getTiles(){
-    return tiles;
+    return gameManager.tiles;
+}
+
+function getTile(x,y){
+    let tileId = gameManager.tiles[y][x];
+    return netframe.getEntity(tileId);
 }
 
 function getSpawnPoints(){
@@ -129,11 +159,37 @@ function setGameManager(instance){
 }
 
 //---------------------------------------------------------------
+// core callback
+//---------------------------------------------------------------
+
+function init(){
+    netframe.addRemoveEntityCallback(removeEntityCallback);
+    netframe.addEndStageCallback(endStageCallback);
+
+    gameManager = new model.GameManager();
+    spawnPoints = [];
+}
+
+function removeEntityCallback(entity){
+    netframe.log('removeEntityCallback() called on modelController with entity id: ' + entity.id);
+    if(entity instanceof model.Player){
+        gameManager.removePlayer(entity.id);
+    }
+}
+
+function endStageCallback(){
+    netframe.removeRemoveEntityCallback(removeEntityCallback);
+}
+
+//---------------------------------------------------------------
 // Interface
 //---------------------------------------------------------------
 
 export default {
+    init: init,
     createPlayer: createPlayer,
+    moveEntity: moveEntity,
+    getTile: getTile,
     getTiles: getTiles,
     getSpawnPoints: getSpawnPoints,
     createTile: createTile,
@@ -143,5 +199,6 @@ export default {
     getRandomSpawnPoint: getRandomSpawnPoint,
     createGameManager: createGameManager,
     getGameManager: getGameManager,
-    setGameManager: setGameManager
+    setGameManager: setGameManager,
+    createTiles: createTiles
 };

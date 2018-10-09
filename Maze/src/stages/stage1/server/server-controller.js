@@ -45,7 +45,9 @@ function cmdMovePlayer(entity, direction){
         return;
     }
 
-    entity.move(direction);
+    //modelController.moveEntity(entity, direction);
+    netframe.makeRPC('moveEntity', [entity.id, direction]);
+
 }
 
 const commands = {
@@ -58,12 +60,16 @@ const commands = {
 
 function init(serverInstance){
 
-    // Setup and initiate NetFrame
+    //initiate NetFrame (always do first)
+    netframe.init(serverInstance); // initialize NetFrame and set server reference
+
+    //initiate modelController
+    modelController.init();
+
+    // Setup
     netframe.shouldLog(true); // stop logging
     netframe.addUpdateCallback(update); // add update callback
     netframe.addClientConnectedCallback(clientConnected); // add client connected callback
-    netframe.addEntitiesRemovedCallback(entityRemoved);
-    netframe.init(serverInstance); // set server reference
     netframe.startLoop(10); // start server update with X ms interval - stop again with stopLoop()
 
     //make gamemanager
@@ -78,25 +84,19 @@ function update(){}
 
 // Gets called from netframe when a client has joined a stage
 function clientConnected(client, networkIdentity){
-    netframe.log('clientConnected() called on server-controller...');
+    netframe.log('clientConnected() callback called on server-controller...');
 
     // Create player
     createPlayer(client, networkIdentity.name, 90, {x:1,y:2});
 
     // Spawn a box when at least 2 players have joined and start the game
-    if(netframe.getNetworkIdentities().length >= 2 && modelController.getGameManager().gameState === model.GameState.WAITING){
+    if(netframe.getNetworkIdentities().length >= 1 && modelController.getGameManager().gameState === model.GameState.WAITING){
         modelController.getGameManager().gameState = model.GameState.PLAYING;
         spawnBox();
     }
 
 }
 
-function entityRemoved(entity){
-    netframe.log('entityRemoved() called with: ' + JSON.stringify(entity));
-
-    //Check if moveable object - then we need to remove from tile.objectOnTile
-
-}
 
 //---------------------------------------------------------------
 // Controller functions
@@ -108,7 +108,9 @@ function createPlayer(owner, name, health){
     let position = randomSpawnPoint ? {x: randomSpawnPoint.position.x, y: randomSpawnPoint.position.y} : {x:0,y:0};
     let entityId = netframe.createNewEntityId();
 
-    modelController.createPlayer(entityId, owner, name, health, position);
+    //modelController.createPlayer(entityId, owner, name, health, position);
+
+    netframe.makeRPC('createPlayer', [entityId, owner,name, health, position]);
 }
 
 function createGameManager(){
@@ -117,13 +119,14 @@ function createGameManager(){
 
 function generateTiles(level){
     netframe.log('Generating tiles...');
-
+    netframe.makeRPC('createTiles', [level]);
+    /*
     for(let y = 0; y < level.length; y++) {
         modelController.getTiles().push([]);
         for(let x = 0; x < level[y].length; x++) {
             modelController.createTile(netframe.createNewEntityId(), level[y][x], {x: x, y: y});
         }
-    }
+    }*/
 }
 
 function spawnBox(){
@@ -136,7 +139,9 @@ function spawnBox(){
     let position = {x: emptyTile.position.x, y: emptyTile.position.y};
     let entityId = netframe.createNewEntityId();
 
-    modelController.createBox(entityId, position);
+    //modelController.createBox(entityId, position);
+
+    netframe.makeRPC('createBox', [entityId, position]);
 }
 
 

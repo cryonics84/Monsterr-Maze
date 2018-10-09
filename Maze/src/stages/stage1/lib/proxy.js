@@ -16,7 +16,6 @@ const proxy = function(originObject) {
             //We do the changes before calling stateChanged, because if the property is being created,
             // then it won't exist for us to get its path.
             let changes = Reflect.set(...arguments);
-            originObject.stateChanged(originObject, targetObj, prop, value);
             return changes;
         },
 

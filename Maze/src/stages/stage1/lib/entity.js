@@ -2,7 +2,7 @@ import rpcController from '../shared/controller/controller';
 import prox from "./proxy";
 import {sharedInterface as netframe} from "./netframe";
 
-function makePrivVar(obj, name){
+export function makePrivVar(obj, name){
     Object.defineProperty(obj, name, {
         enumerable: false,
         writable: true
@@ -10,53 +10,22 @@ function makePrivVar(obj, name){
 }
 
 // Base class that all entities inherit from
-const Entity = (function() {
-
-    class Entity {
-
-        constructor(entityId, owner){
-            makePrivVar(this, 'syncing');
-            this.syncing = true;
-
-
-
-            this.id = entityId;
-            this.owner = owner;
-            netframe.addStateChange(this, 'owner', owner);
-
-            return new prox(this);
-        }
-
-        shouldSync(sync){
-            //_privateVariables.get(this).syncing = sync;
-            this.syncing = sync;
-        }
-
-        isSyncing(){
-            //return _privateVariables.get(this).syncing;
-            return this.syncing;
-        }
-
-        stateChanged(originObject, targetObj, prop, value){
-            if(!this.syncing) return;
-
-            netframe.log('Entity: ' + originObject.id + ', Property changed: ' + prop + ', of targetObj: ' + JSON.stringify(targetObj) + '\n, with value ==> ' + JSON.stringify(targetObj[prop]));
-
-            let propPath = findPropPaths(originObject, (key, path, obj) => key === prop && targetObj[prop] === value && targetObj === obj );
-            netframe.log('Finding path to property: ' + propPath);
-
-            // only add change if we found a valid property path
-            if(propPath){
-                netframe.addStateChange(originObject, propPath, value);
-            }
-        }
+export class Entity {
+    constructor(entityId, owner){
+        this.id = entityId;
+        this.owner = owner;
     }
-    return Entity;
-})();
 
+    spawnView(){
+        netframe.log('spawnView called in super');
+    }
+
+    removeView(){
+        netframe.log('removeView called in super');
+    }
+}
 
 export class NetworkIdentity {
-
     constructor(identityId, clientId, name, color){
         this.identityId = identityId;
         this.clientId = clientId;
@@ -72,46 +41,15 @@ export class NetworkIdentity {
 // DISCONNECTED => JOINED
 export const NetworkStates = { JOINED: 0, LOADING: 1, WAITING: 2, PLAYING: 3, DISCONNECTED: 4, FINISHED: 5};
 
-export default Entity;
+/*
+const IEntity = {
+    Entity: Entity,
+    NetworkIdentity: NetworkIdentity,
+    makePrivVar: makePrivVar
+};
 
-function findPropPaths(obj, predicate, targetObj) {  // The function
-    const discoveredObjects = []; // For checking for cyclic object
-    const path = [];    // The current path being searched
-    const results = []; // The array of paths that satify the predicate === true
-    if (!obj && (typeof obj !== "object" || Array.isArray(obj))) {
-        throw new TypeError("First argument of finPropPath is not the correct type Object");
-    }
-    if (typeof predicate !== "function") {
-        throw new TypeError("Predicate is not a function");
-    }
-    (function find(obj) {
-        for (const key of Object.keys(obj)) {  // use only enumrable own properties.
+export default IEntity;
 
-
-            if (predicate(key, path, obj) === true) {     // Found a path
-                if(Array.isArray(obj)){
-                    // add array identifiers [ and ]
-                    //path.push('['+key+']');
-                    results.push(path.join(""));  // Add the found path to results
-                }else{
-                    path.push(key);                // push the key
-                    results.push(path.join("."));  // Add the found path to results
-                }
-
-                path.pop();                    // remove the key.
-            }
-            const o = obj[key];                 // The next object to be searched
-            if (o && typeof o === "object" ) {   // check for null then type object
-                if (! discoveredObjects.find(obj => obj === o)) {  // check for cyclic link
-                    path.push(key);
-                    discoveredObjects.push(o);
-                    find(o);
-                    path.pop();
-                }
-            }
-        }
-    } (obj));
-    return results;
-}
+*/
 
 
